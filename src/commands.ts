@@ -3,9 +3,17 @@ import { dirname, join } from "node:path";
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
-import { loadResolvedConfig, probeConfig, validateDispatchConfig } from "./config.js";
-import { createConsoleLogger } from "./logger.js";
+import { loadResolvedConfig, probeConfig, resolveWorkflowPath, validateDispatchConfig } from "./config.js";
+import { createFileLogger } from "./logger.js";
 import { SymphonyOrchestrator } from "./orchestrator.js";
+
+type SymphonyUiContext = {
+	ui: {
+		notify(message: string, type?: "info" | "warning" | "error" | "success"): void;
+		setStatus(id: string, value: string | undefined): void;
+		setWidget(id: string, value: string[] | undefined, options?: { placement?: "aboveEditor" | "belowEditor" }): void;
+	};
+};
 
 let daemon: SymphonyOrchestrator | null = null;
 let onceRun: { selector?: string; workflowPath?: string; startedAt: string } | null = null;
@@ -38,16 +46,20 @@ export function registerSymphonyCommands(pi: ExtensionAPI): void {
 		description: "Run one eligible tracker issue through Symphony: /symphony:once [issue-id] [workflow-path]",
 		handler: async (args, ctx) => {
 			const [selector, workflowPath] = parseOnceArgs(args);
-			const orchestrator = new SymphonyOrchestrator(ctx.cwd, workflowPath, createConsoleLogger());
+			const logPath = symphonyLogPath(ctx.cwd, workflowPath);
+			const orchestrator = new SymphonyOrchestrator(ctx.cwd, workflowPath, createFileLogger(logPath));
 			onceRun = { selector, workflowPath, startedAt: new Date().toISOString() };
 			try {
-				ctx.ui.notify(`Symphony once starting${selector ? ` for ${selector}` : ""}. Dashboard is not started for /once; run artifacts are written under .symphony/runs/.`, "info");
+				setSymphonyStatus(ctx, `once${selector ? ` ${selector}` : ""}`);
+				ctx.ui.setWidget("symphony", [`Symphony once${selector ? `: ${selector}` : ""}`, `Log: ${logPath}`, "Artifacts: .symphony/runs/", "Dashboard is not started for /once."], { placement: "belowEditor" });
+				ctx.ui.notify(`Symphony once starting${selector ? ` for ${selector}` : ""}. Log: ${logPath}`, "info");
 				const result = await orchestrator.runOnce(selector);
 				ctx.ui.notify(formatOnceResult("completed", result.artifactPath), "info");
 			} catch (error) {
 				ctx.ui.notify(`Symphony once failed: ${error instanceof Error ? error.message : String(error)}`, "error");
 			} finally {
 				onceRun = null;
+				setSymphonyStatus(ctx, undefined);
 				await orchestrator.stop();
 			}
 		},
@@ -61,13 +73,18 @@ export function registerSymphonyCommands(pi: ExtensionAPI): void {
 				return;
 			}
 			const parsed = parseDaemonArgs(args);
-			daemon = new SymphonyOrchestrator(ctx.cwd, parsed.workflowPath, createConsoleLogger(), { portOverride: parsed.port });
+			const logPath = symphonyLogPath(ctx.cwd, parsed.workflowPath);
+			daemon = new SymphonyOrchestrator(ctx.cwd, parsed.workflowPath, createFileLogger(logPath), { portOverride: parsed.port });
 			try {
 				await daemon.start();
 				const { config } = await loadResolvedConfig(ctx.cwd, parsed.workflowPath);
-				ctx.ui.notify(formatDaemonStarted(daemon, config.tracker.kind, config.tracker.activeStates), "info");
+				setSymphonyStatus(ctx, "daemon running");
+				ctx.ui.setWidget("symphony", daemonWidgetLines(daemon, config.tracker.kind, config.tracker.activeStates, logPath), { placement: "belowEditor" });
+				ctx.ui.notify(formatDaemonStarted(daemon, config.tracker.kind, config.tracker.activeStates, logPath), "info");
 			} catch (error) {
 				daemon = null;
+				setSymphonyStatus(ctx, undefined);
+				ctx.ui.setWidget("symphony", undefined);
 				ctx.ui.notify(`Symphony daemon failed to start: ${error instanceof Error ? error.message : String(error)}`, "error");
 			}
 		},
@@ -82,6 +99,8 @@ export function registerSymphonyCommands(pi: ExtensionAPI): void {
 			}
 			await daemon.stop();
 			daemon = null;
+			setSymphonyStatus(ctx, undefined);
+			ctx.ui.setWidget("symphony", undefined);
 			ctx.ui.notify("Symphony daemon stopped", "info");
 		},
 	});
@@ -91,10 +110,14 @@ export function registerSymphonyCommands(pi: ExtensionAPI): void {
 		handler: async (args, ctx) => {
 			const workflowPath = args.trim() || undefined;
 			if (daemon) {
-				ctx.ui.notify(JSON.stringify(daemon.snapshot(), null, 2), "info");
+				const { config } = await loadResolvedConfig(ctx.cwd, workflowPath);
+				const logPath = symphonyLogPath(ctx.cwd, workflowPath);
+				ctx.ui.setWidget("symphony", daemonWidgetLines(daemon, config.tracker.kind, config.tracker.activeStates, logPath), { placement: "belowEditor" });
+				ctx.ui.notify(`Symphony daemon is running. Dashboard/logs are in the Symphony widget. Log: ${logPath}`, "info");
 				return;
 			}
-			ctx.ui.notify(await formatNoDaemonStatus(ctx.cwd, workflowPath), "info");
+			ctx.ui.setWidget("symphony", await formatNoDaemonStatusLines(ctx.cwd, workflowPath), { placement: "belowEditor" });
+			ctx.ui.notify("Symphony daemon is not running. See Symphony widget for recent runs and start command.", "info");
 		},
 	});
 
@@ -128,10 +151,32 @@ function parseDaemonArgs(args: string): { workflowPath?: string; port?: number }
 	return { workflowPath: positional[0], port };
 }
 
-function formatDaemonStarted(orchestrator: SymphonyOrchestrator, trackerKind: string, activeStates: string[]): string {
+function symphonyLogPath(cwd: string, workflowPath?: string): string {
+	return join(dirname(resolveWorkflowPath(cwd, workflowPath)), ".symphony", "logs", "symphony.log");
+}
+
+function setSymphonyStatus(ctx: SymphonyUiContext, value: string | undefined): void {
+	ctx.ui.setStatus("symphony", value ? `♪ ${value}` : undefined);
+}
+
+function formatDaemonStarted(orchestrator: SymphonyOrchestrator, trackerKind: string, activeStates: string[], logPath: string): string {
 	const http = orchestrator.getHttpAddress();
 	const dashboard = http.enabled && http.port !== null ? ` Dashboard: http://127.0.0.1:${http.port}/` : " Dashboard disabled; pass --port 8080 or set server.port.";
-	return `Symphony daemon started for tracker=${trackerKind}, active_states=[${activeStates.join(", ")}].${dashboard} Use /symphony:status for live state and /symphony:stop to stop.`;
+	return `Symphony daemon started for tracker=${trackerKind}, active_states=[${activeStates.join(", ")}].${dashboard} Log: ${logPath}`;
+}
+
+function daemonWidgetLines(orchestrator: SymphonyOrchestrator, trackerKind: string, activeStates: string[], logPath: string): string[] {
+	const snapshot = orchestrator.snapshot() as { counts?: { running?: number; retrying?: number }; http?: { enabled?: boolean; port?: number | null }; rate_limits?: unknown };
+	const http = snapshot.http?.enabled && snapshot.http.port !== null && snapshot.http.port !== undefined ? `http://127.0.0.1:${snapshot.http.port}/` : "disabled";
+	const running = snapshot.counts?.running ?? 0;
+	const retrying = snapshot.counts?.retrying ?? 0;
+	return [
+		"Symphony daemon: running",
+		`Dashboard: ${http}`,
+		`Tracker: ${trackerKind}; active_states=[${activeStates.join(", ")}]`,
+		`Runs: ${running} running, ${retrying} retrying`,
+		`Log: ${logPath}`,
+	];
 }
 
 function formatDaemonAlreadyRunning(orchestrator: SymphonyOrchestrator): string {
@@ -145,22 +190,23 @@ function formatOnceResult(status: string, artifactPath: string | null): string {
 	return `Symphony once ${status}. Artifacts: ${artifactPath}. Result: ${join(artifactPath, "result.json")}`;
 }
 
-async function formatNoDaemonStatus(cwd: string, workflowPath?: string): Promise<string> {
-	const pieces = ["Symphony daemon is not running."];
+async function formatNoDaemonStatusLines(cwd: string, workflowPath?: string): Promise<string[]> {
+	const pieces = ["Symphony daemon: not running"];
 	if (onceRun) pieces.push(`A /symphony:once command started at ${onceRun.startedAt}${onceRun.selector ? ` for ${onceRun.selector}` : ""}; /once does not start the HTTP dashboard.`);
 	try {
 		const { config } = await loadResolvedConfig(cwd, workflowPath);
 		const port = config.server.port ?? 8080;
-		pieces.push(`Start dashboard/scheduler with: /symphony:daemon --port ${port}`);
+		pieces.push(`Start dashboard/scheduler: /symphony:daemon --port ${port}`);
 		pieces.push(`Workflow: ${config.workflowPath}`);
 		pieces.push(`Tracker: ${config.tracker.kind}; active_states=[${config.tracker.activeStates.join(", ")}]`);
+		pieces.push(`Log: ${symphonyLogPath(cwd, workflowPath)}`);
 		const recent = await recentRuns(dirname(config.workflowPath));
-		if (recent.length > 0) pieces.push(`Recent runs:\n${recent.map((run) => `- ${run}`).join("\n")}`);
+		if (recent.length > 0) pieces.push("Recent runs:", ...recent.map((run) => `- ${run}`));
 		else pieces.push("No recent .symphony/runs artifacts found.");
 	} catch (error) {
 		pieces.push(`Workflow not loaded: ${error instanceof Error ? error.message : String(error)}`);
 	}
-	return pieces.join("\n");
+	return pieces;
 }
 
 async function recentRuns(workflowDir: string): Promise<string[]> {

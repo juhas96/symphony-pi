@@ -82,9 +82,10 @@ Ensure the target repository ignores local Symphony output and secrets:
 .env
 .symphony/runs/
 .symphony/workspaces/
+.symphony/logs/
 ```
 
-Keep workspaces and run artifacts local. `prompt.md`, `events.jsonl`, `metadata.json`, and `result.json` can contain operational context and should not be committed.
+Keep workspaces, run artifacts, and operator logs local. `prompt.md`, `events.jsonl`, `metadata.json`, `result.json`, and `symphony.log` can contain operational context and should not be committed.
 
 ## Create `WORKFLOW.md`
 
@@ -146,7 +147,7 @@ Inside pi from the target repository:
 /symphony:status
 ```
 
-`/symphony:once` runs one issue and writes local artifacts under `.symphony/runs/`; it does not start the HTTP dashboard. Use `/symphony:status` to see recent artifacts when the daemon is not running.
+`/symphony:once` runs one issue and writes local artifacts under `.symphony/runs/`; it does not start the HTTP dashboard. In pi extension mode, structured logs go to `.symphony/logs/symphony.log` and compact state appears in the Symphony widget/status line. Use `/symphony:status` to refresh the widget with recent artifacts when the daemon is not running.
 
 Start the daemon only after a safe one-issue run succeeds:
 
@@ -199,7 +200,7 @@ Requirements:
 2. Install it into project pi settings with `pi install -l`, or update `.pi/settings.json` equivalently.
 3. Create `WORKFLOW.md` for our tracker. Use Linear unless I specify Jira or Beads.
 4. Use environment variables for credentials; do not commit tokens or `.env`.
-5. Add `.symphony/runs/`, `.symphony/workspaces/`, and `.env` to `.gitignore` if missing.
+5. Add `.symphony/runs/`, `.symphony/workspaces/`, `.symphony/logs/`, and `.env` to `.gitignore` if missing.
 6. Configure `hooks.after_create` so each issue workspace contains a fresh checkout/setup of this repo.
 7. Run `/symphony:validate` in pi, then run `/symphony:once <safe-test-issue>` only if I provide a safe issue id.
 8. Report exactly what files changed and what manual secrets/env vars I must set.

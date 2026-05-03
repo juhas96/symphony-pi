@@ -168,7 +168,7 @@ Implement task {{ issue.identifier }}: {{ issue.title }}.
 
 ## HTTP dashboard/API
 
-`/symphony:once` runs a single issue and writes artifacts under `.symphony/runs/`; it does not start the dashboard. Start `/symphony:daemon --port PORT` for a dashboard and scheduler.
+`/symphony:once` runs a single issue and writes artifacts under `.symphony/runs/`; it does not start the dashboard. In pi extension mode, structured Symphony logs are written to `.symphony/logs/symphony.log` and compact status is shown in the Symphony widget/status line instead of dumping logs into the chat transcript. Start `/symphony:daemon --port PORT` for a dashboard and scheduler.
 
 When `server.port` is configured, or `/symphony:daemon --port PORT` / CLI `--port PORT` is used, pi-symphony binds loopback and exposes:
 
@@ -188,7 +188,7 @@ Each run attempt writes a local artifact bundle under `.symphony/runs/` beside `
 - `metadata.json`
 - `result.json`
 
-Artifact paths are surfaced in runtime snapshots and issue API responses. `result.json` includes normalized `status` (`succeeded`, `failed`, `cancelled`) and `terminal_reason` values (`succeeded`, `failed`, `timed_out`, `stalled`, `user_input_required`, `cancelled_by_reconciliation`, `cancelled`). Issue API log entries use `{ label, path, url }` objects for `logs.codex_session_logs`. Keep `.symphony/runs/` ignored because it is mutable operator output.
+Artifact paths are surfaced in runtime snapshots and issue API responses. `result.json` includes normalized `status` (`succeeded`, `failed`, `cancelled`) and `terminal_reason` values (`succeeded`, `failed`, `timed_out`, `stalled`, `user_input_required`, `cancelled_by_reconciliation`, `cancelled`). Issue API log entries use `{ label, path, url }` objects for `logs.codex_session_logs`. Keep `.symphony/runs/` and `.symphony/logs/` ignored because they are mutable operator output.
 
 ## Security posture
 

@@ -1,3 +1,6 @@
+import { appendFileSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+
 import type { Logger } from "./types.js";
 
 function redact(value: unknown): unknown {
@@ -22,12 +25,31 @@ function formatFields(fields: Record<string, unknown> = {}): string {
 		.join(" ");
 }
 
+function formatLogLine(prefix: string, level: string, message: string, fields?: Record<string, unknown>): string {
+	return `[${prefix}] level=${level} message=${JSON.stringify(message)}${fields ? ` ${formatFields(fields)}` : ""}`;
+}
+
 export function createConsoleLogger(prefix = "symphony"): Logger {
 	const log = (level: string, message: string, fields?: Record<string, unknown>) => {
-		const line = `[${prefix}] level=${level} message=${JSON.stringify(message)}${fields ? ` ${formatFields(fields)}` : ""}`;
+		const line = formatLogLine(prefix, level, message, fields);
 		if (level === "error") console.error(line);
 		else if (level === "warn") console.warn(line);
 		else console.log(line);
+	};
+	return {
+		info: (message, fields) => log("info", message, fields),
+		warn: (message, fields) => log("warn", message, fields),
+		error: (message, fields) => log("error", message, fields),
+		debug: (message, fields) => {
+			if (process.env.SYMPHONY_DEBUG) log("debug", message, fields);
+		},
+	};
+}
+
+export function createFileLogger(path: string, prefix = "symphony"): Logger {
+	mkdirSync(dirname(path), { recursive: true });
+	const log = (level: string, message: string, fields?: Record<string, unknown>) => {
+		appendFileSync(path, `${formatLogLine(prefix, level, message, fields)}\n`, "utf8");
 	};
 	return {
 		info: (message, fields) => log("info", message, fields),
