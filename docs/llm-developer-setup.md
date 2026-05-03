@@ -147,7 +147,7 @@ Inside pi from the target repository:
 /symphony:status
 ```
 
-`/symphony:once` runs one issue and writes local artifacts under `.symphony/runs/`; it does not start the HTTP dashboard. In pi extension mode, structured logs go to `.symphony/logs/symphony.log` and compact state appears in the Symphony widget/status line. Use `/symphony:status` to refresh the widget with recent artifacts when the daemon is not running.
+`/symphony:once` runs one issue and writes local artifacts under `.symphony/runs/`; it does not start the HTTP dashboard. In pi extension mode, structured logs go to `.symphony/logs/symphony.log`; `/symphony:daemon` renders a live Symphony panel below the editor with agent counts, tokens, rate limits, running issues, retry/backoff queue, dashboard URL, and log path. Use `/symphony:status` to refresh the widget with recent artifacts when the daemon is not running.
 
 Start the daemon only after a safe one-issue run succeeds:
 

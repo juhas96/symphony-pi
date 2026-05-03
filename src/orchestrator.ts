@@ -650,6 +650,7 @@ function runningRow(entry: RunningEntry): Record<string, unknown> {
 		issue_id: entry.issue.id,
 		issue_identifier: entry.identifier,
 		state: entry.issue.state,
+		pid: entry.codex_app_server_pid,
 		session_id: entry.session_id,
 		terminal_reason: entry.terminal_reason,
 		turn_count: entry.turn_count,
