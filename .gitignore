@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+.symphony/runs/
+.symphony/workspaces/
+.DS_Store
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key

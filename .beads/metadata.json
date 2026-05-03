@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "pi_symphony",
+  "project_id": "d9048c31-d14b-49ba-8183-deefcd1e648f"
+}
