@@ -9,7 +9,7 @@ import packageJson from "../package.json" with { type: "json" };
 import { main } from "../src/cli.js";
 
 test("package metadata exposes pi extension, files, bin, and runtime dependencies", () => {
-	assert.equal(packageJson.name, "@juhas96/symphony-pi");
+	assert.equal(packageJson.name, "@jkbjhs/symphony-pi");
 	assert.equal("private" in packageJson, false);
 	assert.equal(packageJson.publishConfig.access, "public");
 	assert.equal(packageJson.repository.url, "git+ssh://git@github.com/juhas96/symphony-pi.git");

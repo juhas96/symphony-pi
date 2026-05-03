@@ -33,7 +33,7 @@ test("operator docs and examples cover trackers, security, runbook, and real int
 	assert.match(runbook, /npm run smoke:jira-live/);
 	assert.match(trackerExtensions, /implementation-defined tracker extensions/i);
 	assert.match(llmSetup, /LLM developer setup guide/);
-	assert.match(llmSetup, /pi install -l npm:@juhas96\/symphony-pi/);
+	assert.match(llmSetup, /pi install -l npm:@jkbjhs\/symphony-pi/);
 	assert.match(llmSetup, /https:\/\/github\.com\/juhas96\/symphony-pi/);
 	assert.match(llmSetup, /\/symphony/);
 	assert.doesNotMatch(llmSetup, /\/symphony:\*/);

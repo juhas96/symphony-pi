@@ -28,7 +28,7 @@ All trackers normalize into the Symphony `Issue` model, so orchestration/workspa
 Install from npm into another repository's project pi settings:
 
 ```bash
-pi install -l npm:@juhas96/symphony-pi
+pi install -l npm:@jkbjhs/symphony-pi
 ```
 
 Install from GitHub instead:
@@ -47,7 +47,7 @@ Equivalent project settings shape:
 
 ```json
 {
-  "packages": ["npm:@juhas96/symphony-pi"]
+  "packages": ["npm:@jkbjhs/symphony-pi"]
 }
 ```
 
@@ -82,7 +82,7 @@ For a copy/paste guide that an LLM coding agent can follow in a target repositor
 
 Shortest path:
 
-1. Install this package with `pi install -l npm:@juhas96/symphony-pi` or `pi install -l git:git@github.com:juhas96/symphony-pi.git`.
+1. Install this package with `pi install -l npm:@jkbjhs/symphony-pi` or `pi install -l git:git@github.com:juhas96/symphony-pi.git`.
 2. Copy and customize one of `examples/WORKFLOW.*.md` as the target repo's `WORKFLOW.md`.
 3. Set tracker credentials in exported environment variables or the target repo's ignored `.env`, not in git.
 4. Add `.env`, `.symphony/runs/`, and `.symphony/workspaces/` to the target repo's `.gitignore`.
