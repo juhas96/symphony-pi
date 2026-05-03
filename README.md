@@ -25,11 +25,23 @@ All trackers normalize into the Symphony `Issue` model, so orchestration/workspa
 
 ## Installation / pi package consumption
 
+Install from GitHub into another repository's project pi settings:
+
+```bash
+pi install -l git:git@github.com:juhas96/symphony-pi.git
+```
+
 Local development from another repository:
+
+```bash
+pi install -l /absolute/path/to/pi-symphony
+```
+
+Equivalent project settings shape:
 
 ```json
 {
-  "packages": ["../pi-symphony"]
+  "packages": ["git:git@github.com:juhas96/symphony-pi.git"]
 }
 ```
 
@@ -55,9 +67,20 @@ The smoke starts pi in RPC mode with this package loaded via `--extension`, crea
 
 Known limitations:
 
-- `linear_graphql` app-server tool is intentionally omitted in this version.
 - Real tracker/Codex integration tests require external credentials and are documented in `docs/runbook.md`.
 - Jira and Beads trackers are pi-symphony implementation-defined extensions beyond the OpenAI Symphony draft.
+
+## LLM-assisted setup in another repository
+
+For a copy/paste guide that an LLM coding agent can follow in a target repository, see [`docs/llm-developer-setup.md`](docs/llm-developer-setup.md).
+
+Shortest path:
+
+1. Install this package with `pi install -l git:git@github.com:juhas96/symphony-pi.git`.
+2. Copy and customize one of `examples/WORKFLOW.*.md` as the target repo's `WORKFLOW.md`.
+3. Set tracker credentials in environment variables, not in git.
+4. Add `.env`, `.symphony/runs/`, and `.symphony/workspaces/` to the target repo's `.gitignore`.
+5. Run `/symphony:validate`, then `/symphony:once <safe-issue-id>`.
 
 ## CLI host
 

@@ -9,6 +9,7 @@ test("operator docs and examples cover trackers, security, runbook, and real int
 	const security = await readFile("docs/security.md", "utf8");
 	const runbook = await readFile("docs/runbook.md", "utf8");
 	const trackerExtensions = await readFile("docs/tracker-extensions.md", "utf8");
+	const llmSetup = await readFile("docs/llm-developer-setup.md", "utf8");
 
 	assert.match(linear, /kind: linear/);
 	assert.match(jira, /kind: jira/);
@@ -30,6 +31,10 @@ test("operator docs and examples cover trackers, security, runbook, and real int
 	assert.match(runbook, /npm run smoke:linear-live/);
 	assert.match(runbook, /npm run smoke:jira-live/);
 	assert.match(trackerExtensions, /implementation-defined tracker extensions/i);
+	assert.match(llmSetup, /LLM developer setup guide/);
+	assert.match(llmSetup, /pi install -l git:git@github\.com:juhas96\/symphony-pi\.git/);
+	assert.match(llmSetup, /\/symphony:validate/);
+	assert.match(llmSetup, /WORKFLOW\.md/);
 });
 
 test("validation docs describe linear_graphql advertisement and dynamic handler", async () => {
@@ -40,6 +45,8 @@ test("validation docs describe linear_graphql advertisement and dynamic handler"
 	assert.match(matrix, /advertised and handled/i);
 	assert.match(matrix, /dynamic_tools/);
 	assert.match(matrix, /unsupported_tool_call/);
+	assert.match(readme, /docs\/llm-developer-setup\.md/);
+	assert.doesNotMatch(readme, /linear_graphql.*omitted/i);
 	assert.match(readme, /linear_graphql/);
 	assert.match(readme, /advertised on `thread\/start`/i);
 	assert.match(readme, /smoke:pi-extension/);

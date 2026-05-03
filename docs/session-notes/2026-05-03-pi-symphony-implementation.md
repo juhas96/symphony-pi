@@ -13,7 +13,7 @@ Implement `pi-symphony` as a pi extension/package according to the OpenAI Sympho
   - Linear (spec-compatible core tracker)
   - Jira Cloud with email/API token auth
   - Beads via local `bd` CLI
-- The optional `linear_graphql` app-server tool was intentionally omitted for this version and documented as such.
+- The optional `linear_graphql` app-server tool was initially deferred in the first implementation pass; later conformance work implemented advertisement and handling for Linear sessions. See `docs/validation-matrix.md`.
 - After initial implementation, highest-ROI hardening was identified and converted into Beads tasks.
 
 ## Implemented architecture
@@ -96,6 +96,7 @@ CLI:
 - `docs/validation-matrix.md`
 - `docs/security.md`
 - `docs/runbook.md`
+- `docs/llm-developer-setup.md`
 - `examples/WORKFLOW.linear.md`
 - `examples/WORKFLOW.jira.md`
 - `examples/WORKFLOW.beads.md`
@@ -137,7 +138,7 @@ Closed children:
 - `pi-symphony-a09.2` — Complete tracker adapter conformance tests.
 - `pi-symphony-a09.3` — Finish orchestrator scheduling and reconciliation conformance.
 - `pi-symphony-a09.4` — Complete workspace safety and hook conformance.
-- `pi-symphony-a09.5` — Decide and implement linear_graphql app-server tool extension (decision: intentionally omitted/documented).
+- `pi-symphony-a09.5` — Decide and implement linear_graphql app-server tool extension (initial decision: deferred; superseded by later conformance work).
 - `pi-symphony-a09.6` — Polish HTTP API and CLI host lifecycle.
 - `pi-symphony-a09.7` — Write operator docs and WORKFLOW examples.
 - `pi-symphony-a09.8` — Prepare pi package release and consumption checks.
@@ -182,4 +183,4 @@ Recommended order captured in Beads:
 - No live Linear/Jira credential-backed smoke yet.
 - No durable per-attempt artifact bundle yet.
 - HTTP event history is still limited.
-- `linear_graphql` optional tool is omitted for this version.
+- `linear_graphql` is no longer a gap; it is advertised and handled for Linear sessions with valid auth.

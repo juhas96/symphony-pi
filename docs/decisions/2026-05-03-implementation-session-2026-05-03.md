@@ -105,13 +105,13 @@ OpenAI Symphony spec integration summary:
 - Codex app-server client uses JSONL protocol for initialize/initialized/thread/start/turn/start/turn/completed.
 - HTTP dashboard/API implements /, /api/v1/state, /api/v1/<issue_identifier>, /api/v1/refresh.
 
-Key omitted/known gaps recorded:
+Initial known gaps recorded before later ROI/conformance hardening:
 - No real Codex app-server smoke yet.
 - No real pi extension load smoke yet.
 - No live Linear/Jira credential-backed smoke yet.
 - No durable per-attempt artifact bundle yet.
 - HTTP event history is still limited.
-- optional linear_graphql app-server tool intentionally omitted in this version.
+- optional linear_graphql app-server tool was initially deferred; later conformance work implemented advertisement and handling for Linear sessions.
 
 Beads completed epic:
 pi-symphony-a09 — Complete pi-symphony implementation to spec conformance — CLOSED.
@@ -120,7 +120,7 @@ pi-symphony-a09.1 Harden Codex app-server runner protocol handling.
 pi-symphony-a09.2 Complete tracker adapter conformance tests.
 pi-symphony-a09.3 Finish orchestrator scheduling and reconciliation conformance.
 pi-symphony-a09.4 Complete workspace safety and hook conformance.
-pi-symphony-a09.5 Decide and implement linear_graphql app-server tool extension (decision: intentionally omitted/documented).
+pi-symphony-a09.5 Decide and implement linear_graphql app-server tool extension (initial decision: deferred; superseded by later conformance work).
 pi-symphony-a09.6 Polish HTTP API and CLI host lifecycle.
 pi-symphony-a09.7 Write operator docs and WORKFLOW examples.
 pi-symphony-a09.8 Prepare pi package release and consumption checks.
