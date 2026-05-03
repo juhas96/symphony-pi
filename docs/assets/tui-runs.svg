@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1220" height="576" viewBox="0 0 1220 576" role="img" aria-label="pi-symphony TUI — Runs">
+  <rect width="100%" height="100%" rx="14" fill="#0d1117"/>
+  <rect x="0.5" y="0.5" width="1219" height="575" rx="14" fill="none" stroke="#30363d"/>
+  <circle cx="24" cy="24" r="6" fill="#ff5f56"/>
+  <circle cx="44" cy="24" r="6" fill="#ffbd2e"/>
+  <circle cx="64" cy="24" r="6" fill="#27c93f"/>
+  <text x="90" y="29" fill="#8b949e" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="12">pi-symphony TUI — Runs</text>
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="13" xml:space="preserve">
+<text x="18" y="48" fill="#d1d5da">╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮</text>
+<text x="18" y="66" fill="#7ee787">│♪ Symphony daemon: running · agents 2/3 · tokens 60,854                                                                                             │</text>
+<text x="18" y="84" fill="#7ee787">│1:Overview  2:Queue  3:Running  4:Issue  5:Logs  6:Runs  7:Config  8:Help                                                                           │</text>
+<text x="18" y="102" fill="#d1d5da">├────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤</text>
+<text x="18" y="120" fill="#d1d5da">│Wide split layout ≥140 cols: list left, detail right.                                                                                               │</text>
+<text x="18" y="138" fill="#79c0ff">│Runs list                                                                         │ Detail ABC-88                                                   │</text>
+<text x="18" y="156" fill="#79c0ff">│Runs                                                                              │ Run ABC-88                                                      │</text>
+<text x="18" y="174" fill="#d1d5da">│1 recent run(s)                                                                   │ Artifact: .symphony/runs/2026-05-03_ABC-88_attempt-1             │</text>
+<text x="18" y="192" fill="#ff7b72">│ID           STATUS       AGE       ERROR / ARTIFACT                              │ Status: failed · terminal=timed_out · finished=2026-05-03T20:24…│</text>
+<text x="18" y="210" fill="#ff7b72">│▸ ABC-88       [failed]     0s        turn_timeout after 120000ms · .symphony/…   │ Workspace: .symphony/workspaces/ABC-88                          │</text>
+<text x="18" y="228" fill="#d1d5da">│                                                                                  │ Logs: .symphony/runs/2026-05-03_ABC-88_attempt-1/events.jsonl   │</text>
+<text x="18" y="246" fill="#79c0ff">│                                                                                  │ Triage: codex timeout · Inspect run logs, reduce scope, or rais…│</text>
+<text x="18" y="264" fill="#8b949e">│                                                                                  │ Action: jump to logs from the action menu, or press i on Logs f…│</text>
+<text x="18" y="282" fill="#ff7b72">│                                                                                  │ Error: turn_timeout after 120000ms                              │</text>
+<text x="18" y="300" fill="#ff7b72">│                                                                                  │ Last event: {&quot;event&quot;:&quot;turn_failed&quot;}                             │</text>
+<text x="18" y="318" fill="#79c0ff">│                                                                                  │ Timeline                                                        │</text>
+<text x="18" y="336" fill="#d1d5da">│                                                                                  │ 2026-05-03T20:21:00Z  claimed — ABC-88                          │</text>
+<text x="18" y="354" fill="#d1d5da">│                                                                                  │ 2026-05-03T20:21:00Z +0s  workspace —                           │</text>
+<text x="18" y="372" fill="#d1d5da">│                                                                                  │ .symphony/workspaces/ABC-88                                     │</text>
+<text x="18" y="390" fill="#d1d5da">│                                                                                  │ 2026-05-03T20:21:02Z +2s  session_started — sess_abc88          │</text>
+<text x="18" y="408" fill="#d1d5da">│                                                                                  │ 2026-05-03T20:22:13Z +1m 11s  turn_started — turn_1             │</text>
+<text x="18" y="426" fill="#ff7b72">│                                                                                  │ 2026-05-03T20:24:41Z +2m 28s  turn_failed — turn_timeout after  │</text>
+<text x="18" y="444" fill="#d1d5da">│                                                                                  │ 120000ms                                                        │</text>
+<text x="18" y="462" fill="#ff7b72">│                                                                                  │ 2026-05-03T20:24:45Z +4s  result:failed — timed_out             │</text>
+<text x="18" y="480" fill="#8b949e">│                                                                                  │ Press v to toggle raw result.json preview.                      │</text>
+<text x="18" y="498" fill="#d1d5da">├────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤</text>
+<text x="18" y="516" fill="#d1d5da">│r refresh · R all · a actions · : palette · ? help · q close · d start · s stop · x once · / filter                                                 │</text>
+<text x="18" y="534" fill="#d1d5da">╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯</text>
+  </g>
+</svg>

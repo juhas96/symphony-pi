@@ -23,6 +23,22 @@ All trackers normalize into the Symphony `Issue` model, so orchestration/workspa
 
 `/symphony` opens the full-screen operator console. Start/stop daemon mode, run once, validate/reload config, inspect queue/running/runs/logs, and open dashboard/artifacts from inside the TUI.
 
+## TUI screenshots
+
+The console is a keyboard-first terminal UI for operating the daemon without leaving pi.
+
+### Overview
+
+![pi-symphony TUI overview](docs/assets/tui-overview.svg)
+
+### Queue triage
+
+![pi-symphony TUI queue](docs/assets/tui-queue.svg)
+
+### Run artifacts
+
+![pi-symphony TUI runs](docs/assets/tui-runs.svg)
+
 ## Installation / pi package consumption
 
 Install from npm into another repository's project pi settings:

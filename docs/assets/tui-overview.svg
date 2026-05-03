@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1220" height="378" viewBox="0 0 1220 378" role="img" aria-label="pi-symphony TUI — Overview">
+  <rect width="100%" height="100%" rx="14" fill="#0d1117"/>
+  <rect x="0.5" y="0.5" width="1219" height="377" rx="14" fill="none" stroke="#30363d"/>
+  <circle cx="24" cy="24" r="6" fill="#ff5f56"/>
+  <circle cx="44" cy="24" r="6" fill="#ffbd2e"/>
+  <circle cx="64" cy="24" r="6" fill="#27c93f"/>
+  <text x="90" y="29" fill="#8b949e" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="12">pi-symphony TUI — Overview</text>
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="13" xml:space="preserve">
+<text x="18" y="48" fill="#d1d5da">╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮</text>
+<text x="18" y="66" fill="#7ee787">│♪ Symphony daemon: running · agents 2/3 · tokens 60,854                                                                                             │</text>
+<text x="18" y="84" fill="#7ee787">│1:Overview  2:Queue  3:Running  4:Issue  5:Logs  6:Runs  7:Config  8:Help                                                                           │</text>
+<text x="18" y="102" fill="#d1d5da">├────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤</text>
+<text x="18" y="120" fill="#79c0ff">│Overview                                                                                                                                            │</text>
+<text x="18" y="138" fill="#7ee787">│Daemon: running                                                                                                                                     │</text>
+<text x="18" y="156" fill="#d1d5da">│Once: idle                                                                                                                                          │</text>
+<text x="18" y="174" fill="#d1d5da">│Agents: 2/3                                                                                                                                         │</text>
+<text x="18" y="192" fill="#d1d5da">│Runtime: 18m 0s                                                                                                                                     │</text>
+<text x="18" y="210" fill="#7ee787">│Tokens: in 48,210 · out 12,644 · total 60,854                                                                                                       │</text>
+<text x="18" y="228" fill="#7ee787">│Rate limits: {&quot;status&quot;:&quot;ok&quot;,&quot;remaining&quot;:42,&quot;reset&quot;:&quot;soon&quot;}                                                                                          │</text>
+<text x="18" y="246" fill="#d1d5da">│Dashboard: http://127.0.0.1:8080/                                                                                                                   │</text>
+<text x="18" y="264" fill="#d1d5da">│Workflow: ./WORKFLOW.md                                                                                                                             │</text>
+<text x="18" y="282" fill="#d1d5da">│Last reload: 2026-05-03T20:24:58Z                                                                                                                   │</text>
+<text x="18" y="300" fill="#d1d5da">├────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤</text>
+<text x="18" y="318" fill="#d1d5da">│r refresh · R all · a actions · : palette · ? help · q close · d start · s stop · x once · / filter                                                 │</text>
+<text x="18" y="336" fill="#d1d5da">╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯</text>
+  </g>
+</svg>
