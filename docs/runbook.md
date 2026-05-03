@@ -10,14 +10,17 @@ Create a repository-owned `WORKFLOW.md`. Start from one of:
 
 Set credentials via environment variables, not literal tokens.
 
-## 2. Validate
+## 2. Open and validate
 
 Inside pi:
 
 ```text
-/symphony:validate
-/symphony:validate path/to/WORKFLOW.md
+/symphony
+/symphony path/to/WORKFLOW.md
+/symphony --port 8080 path/to/WORKFLOW.md
 ```
+
+Open the Config tab to inspect validation. The console opens even when config is invalid so operators can see the workflow path, error code, and recovery guidance.
 
 CLI host:
 
@@ -35,7 +38,7 @@ Local pi extension load smoke:
 npm run smoke:pi-extension
 ```
 
-This creates a temporary consumer project, starts `pi --mode rpc --extension <this package>`, verifies the registered `/symphony:*` commands with `get_commands`, then invokes `/symphony:validate` against a temporary `WORKFLOW.md`. If `pi` is unavailable, the script prints `[skip]` and exits successfully so CI can distinguish unavailable tooling from failure.
+This creates a temporary consumer project, starts `pi --mode rpc --extension <this package>`, and verifies the single `/symphony` command with `get_commands`. If `pi` is unavailable, the script prints `[skip]` and exits successfully so CI can distinguish unavailable tooling from failure.
 
 Codex app-server schema compatibility smoke:
 
@@ -63,24 +66,25 @@ This initializes a temporary Beads project with `bd init --non-interactive`, cre
 
 ## 3. Run one issue
 
-Inside pi:
+Inside `/symphony`, use Queue:
 
 ```text
-/symphony:once ABC-123
-/symphony:once ABC-123 path/to/WORKFLOW.md
+x  run once for highlighted eligible issue
+X  run once for first eligible issue
 ```
 
-If no issue id/key is supplied, Symphony selects the first eligible candidate by priority, created time, and identifier.
+If no issue id/key is supplied, Symphony selects the first eligible candidate by priority, created time, and identifier. Run-once mode is disabled while daemon mode is active.
 
 ## 4. Start daemon
 
-Inside pi:
+Inside `/symphony`:
 
 ```text
-/symphony:daemon
-/symphony:daemon --port 8080
-/symphony:daemon --port 8080 path/to/WORKFLOW.md
+d  start daemon
+s  stop daemon
 ```
+
+Start `/symphony --port 8080 path/to/WORKFLOW.md` when you want the dashboard enabled as start context.
 
 CLI host:
 
@@ -88,21 +92,11 @@ CLI host:
 npm run cli -- --port 8080 path/to/WORKFLOW.md
 ```
 
-Stop from pi:
-
-```text
-/symphony:stop
-```
-
-The CLI host stops on SIGINT/SIGTERM.
+The CLI host stops on SIGINT/SIGTERM. Inside pi, closing the console does not stop the daemon; stop it with `s`.
 
 ## 5. Observe status
 
-Inside pi:
-
-```text
-/symphony:status
-```
+Inside `/symphony`, use Overview, Queue, Running, Issue, Logs, Runs, Config, and Help. Use `r` to refresh the current view, `R` to refresh all, `a` for contextual actions, and `?` for help.
 
 HTTP dashboard/API when enabled:
 
@@ -199,12 +193,12 @@ The Jira live smoke is read-only. It uses Jira Cloud email/API-token auth, sets 
 Required:
 
 - Initialized `.beads` database in the workflow directory
-- `bd ready --json` returns at least one safe test issue for `/symphony:once`
+- `bd ready --json` returns at least one safe test issue for run-once from `/symphony`
 
 Smoke:
 
 ```text
-/symphony:validate examples/WORKFLOW.beads.md
+/symphony examples/WORKFLOW.beads.md
 ```
 
 If credentials or external services are unavailable, mark real integration checks as skipped rather than passed.

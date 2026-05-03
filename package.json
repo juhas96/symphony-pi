@@ -1,7 +1,6 @@
 {
-  "name": "pi-symphony",
-  "version": "0.1.0",
-  "private": true,
+  "name": "@juhas96/symphony-pi",
+  "version": "0.4.0",
   "type": "module",
   "description": "Generic Symphony autonomous issue orchestration extension for pi.",
   "keywords": [
@@ -11,7 +10,7 @@
     "automation"
   ],
   "bin": {
-    "pi-symphony": "./bin/pi-symphony.mjs"
+    "pi-symphony": "bin/pi-symphony.mjs"
   },
   "files": [
     "bin/",
@@ -33,7 +32,8 @@
     "smoke:beads-e2e": "node --import tsx scripts/smoke-beads-e2e.ts",
     "smoke:linear-live": "node --import tsx scripts/smoke-linear-live.ts",
     "smoke:jira-live": "node --import tsx scripts/smoke-jira-live.ts",
-    "smoke:live": "npm run smoke:linear-live && npm run smoke:jira-live"
+    "smoke:live": "npm run smoke:linear-live && npm run smoke:jira-live",
+    "prepublishOnly": "npm run check && npm test && npm run smoke:pi-extension"
   },
   "pi": {
     "extensions": [
@@ -41,17 +41,34 @@
     ]
   },
   "peerDependencies": {
-    "@mariozechner/pi-coding-agent": "*"
+    "@mariozechner/pi-coding-agent": "*",
+    "@mariozechner/pi-tui": "*"
   },
   "devDependencies": {
     "@mariozechner/pi-coding-agent": "*",
     "@types/node": "^24.0.0",
     "fallow": "^2.62.0",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "@mariozechner/pi-tui": "*"
   },
   "dependencies": {
     "liquidjs": "^10.25.7",
     "tsx": "^4.20.5",
     "yaml": "^2.8.4"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/juhas96/symphony-pi.git"
+  },
+  "bugs": {
+    "url": "https://github.com/juhas96/symphony-pi/issues"
+  },
+  "homepage": "https://github.com/juhas96/symphony-pi#readme",
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

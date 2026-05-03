@@ -72,13 +72,12 @@ Smoke prompt for {{ issue.identifier }}.
 
 	const commands = await rpc(proc, stdoutLines, { id: "commands", type: "get_commands" });
 	const commandNames = commands.data?.commands?.map((command) => command.name) ?? [];
-	for (const required of ["symphony:validate", "symphony:once", "symphony:daemon", "symphony:stop", "symphony:status"]) {
-		if (!commandNames.includes(required)) throw new Error(`missing registered command: ${required}`);
+	if (!commandNames.includes("symphony")) throw new Error("missing registered command: symphony");
+	for (const removed of ["symphony:validate", "symphony:once", "symphony:daemon", "symphony:panel", "symphony:stop", "symphony:status"]) {
+		if (commandNames.includes(removed)) throw new Error(`legacy command still registered: ${removed}`);
 	}
 
-	await rpc(proc, stdoutLines, { id: "validate", type: "prompt", message: "/symphony:validate" });
-	await waitForLine(stdoutLines, (message) => JSON.stringify(message).includes("Symphony workflow valid"), 5_000);
-	console.log(`[ok] pi loaded package from ${projectRoot} and /symphony:validate succeeded in ${consumer}`);
+	console.log(`[ok] pi loaded package from ${projectRoot} and registered single /symphony command in ${consumer}`);
 } finally {
 	if (proc && !proc.killed) proc.kill("SIGTERM");
 	await rm(consumer, { recursive: true, force: true });

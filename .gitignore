@@ -13,6 +13,7 @@ coverage/
 .fallow/
 
 .DS_Store
+.idea/
 
 # Beads / Dolt files (added by bd init)
 .dolt/

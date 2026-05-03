@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import { loadResolvedConfig, normalizeState, validateDispatchConfig } from "./config.js";
 import { CodexAppServerClient } from "./codex.js";
+import { evaluateIssueEligibility, runtimeStateFromOrchestratorState, sortIssuesForDispatch, type EligibilityResult } from "./eligibility.js";
 import { SymphonyHttpServer } from "./http.js";
 import { renderPromptTemplate } from "./template.js";
 import { createTrackerAdapter, type TrackerAdapter } from "./tracker.js";
@@ -23,6 +24,19 @@ export interface RunOnceResult {
 	artifactPath: string | null;
 }
 
+export interface QueueIssueSnapshot {
+	issue: Issue;
+	eligibility: EligibilityResult;
+}
+
+export interface QueueSnapshot {
+	eligible: QueueIssueSnapshot[];
+	notDispatchable: QueueIssueSnapshot[];
+	retrying: unknown[];
+	fetched_at: string;
+	error: string | null;
+}
+
 export class SymphonyOrchestrator {
 	readonly state: OrchestratorState;
 	private workflow: WorkflowDefinition | null = null;
@@ -35,6 +49,7 @@ export class SymphonyOrchestrator {
 	private stopping = false;
 	private tickInFlight = false;
 	private reloadError: string | null = null;
+	private lastReloadAt: string | null = null;
 	private httpServer: SymphonyHttpServer | null = null;
 
 	constructor(
@@ -101,13 +116,43 @@ export class SymphonyOrchestrator {
 		await this.reload(true);
 		validateDispatchConfig(this.requireConfig());
 		const issues = await this.tracker.fetchCandidateIssues();
-		const issue = selector ? issues.find((candidate) => candidate.id === selector || candidate.identifier === selector) : this.sortForDispatch(issues).find((candidate) => this.shouldDispatch(candidate));
+		const issue = selector ? issues.find((candidate) => candidate.id === selector || candidate.identifier === selector) : sortIssuesForDispatch(issues).find((candidate) => this.shouldDispatch(candidate));
 		if (!issue) throw new Error(this.formatNoCandidateError(selector, issues.length));
 		return this.dispatchAndWait(issue, null);
 	}
 
 	async refreshNow(): Promise<void> {
 		await this.tick();
+	}
+
+	getWorkflowPath(): string | null {
+		return this.config?.workflowPath ?? null;
+	}
+
+	getConfig(): SymphonyConfig | null {
+		return this.config;
+	}
+
+	async refreshIssueDetails(issue: Issue): Promise<Issue | null> {
+		const [fresh] = await this.tracker.fetchIssueStatesByIds([issue.id]);
+		return fresh ?? null;
+	}
+
+	async queueSnapshot(): Promise<QueueSnapshot> {
+		try {
+			const issues = sortIssuesForDispatch(await this.tracker.fetchCandidateIssues());
+			const runtime = runtimeStateFromOrchestratorState(this.state);
+			const rows = issues.map((issue) => ({ issue, eligibility: evaluateIssueEligibility(issue, runtime, this.requireConfig()) }));
+			return {
+				eligible: rows.filter((row) => row.eligibility.eligible),
+				notDispatchable: rows.filter((row) => !row.eligibility.eligible),
+				retrying: this.retryRows(),
+				fetched_at: new Date().toISOString(),
+				error: null,
+			};
+		} catch (error) {
+			return { eligible: [], notDispatchable: [], retrying: this.retryRows(), fetched_at: new Date().toISOString(), error: errorMessage(error) };
+		}
 	}
 
 	getHttpAddress(): { enabled: boolean; port: number | null } {
@@ -139,8 +184,27 @@ export class SymphonyOrchestrator {
 			rate_limits: this.state.codex_rate_limits,
 			last_reload_error: this.reloadError,
 			workflow_path: this.config?.workflowPath ?? null,
+			workflow_dir: this.config?.workflowDir ?? null,
+			tracker_kind: this.config?.tracker.kind ?? null,
+			max_concurrent_agents: this.config?.agent.maxConcurrentAgents ?? null,
+			poll_interval_ms: this.config?.polling.intervalMs ?? null,
+			last_reload_at: this.lastReloadAt,
 			http: this.getHttpAddress(),
 		};
+	}
+
+	private retryRows(): unknown[] {
+		return [...this.state.retry_attempts.values()].map((retry) => ({
+			issue_id: retry.issue_id,
+			issue_identifier: retry.identifier,
+			attempt: retry.attempt,
+			due_at: new Date(Date.now() + Math.max(retry.due_at_ms - performance.now(), 0)).toISOString(),
+			error: retry.error,
+			artifact_path: retry.artifact_path ?? null,
+			artifacts: retry.artifact_path ? artifactPaths(retry.artifact_path) : null,
+			logs: retry.artifact_path ? artifactLogs(retry.artifact_path) : { codex_session_logs: [] },
+			terminal_reason: retry.terminal_reason ?? null,
+		}));
 	}
 
 	issueSnapshot(identifier: string): unknown | null {
@@ -195,7 +259,7 @@ export class SymphonyOrchestrator {
 				this.logger.error("candidate fetch failed", { error: errorMessage(error) });
 				return;
 			}
-			for (const issue of this.sortForDispatch(issues)) {
+			for (const issue of sortIssuesForDispatch(issues)) {
 				if (this.availableGlobalSlots() <= 0) break;
 				if (this.shouldDispatch(issue)) this.dispatch(issue, null);
 			}
@@ -220,6 +284,7 @@ export class SymphonyOrchestrator {
 			this.state.poll_interval_ms = config.polling.intervalMs;
 			this.state.max_concurrent_agents = config.agent.maxConcurrentAgents;
 			this.reloadError = null;
+			this.lastReloadAt = new Date().toISOString();
 			return true;
 		} catch (error) {
 			this.reloadError = errorMessage(error);
@@ -256,6 +321,7 @@ export class SymphonyOrchestrator {
 			port,
 			snapshot: () => this.snapshot(),
 			issueSnapshot: (identifier) => this.issueSnapshot(identifier),
+			queueSnapshot: () => this.queueSnapshot(),
 			refresh: () => this.refreshNow(),
 		});
 		const address = await this.httpServer.start();
@@ -578,34 +644,16 @@ export class SymphonyOrchestrator {
 	}
 
 	private sortForDispatch(issues: Issue[]): Issue[] {
-		return [...issues].sort((a, b) => {
-			const pa = a.priority ?? Number.POSITIVE_INFINITY;
-			const pb = b.priority ?? Number.POSITIVE_INFINITY;
-			if (pa !== pb) return pa - pb;
-			const ca = a.created_at ? Date.parse(a.created_at) : Number.POSITIVE_INFINITY;
-			const cb = b.created_at ? Date.parse(b.created_at) : Number.POSITIVE_INFINITY;
-			if (ca !== cb) return ca - cb;
-			return a.identifier.localeCompare(b.identifier);
-		});
+		return sortIssuesForDispatch(issues);
 	}
 
 	private shouldDispatch(issue: Issue): boolean {
-		if (!issue.id || !issue.identifier || !issue.title || !issue.state) return false;
-		if (!this.isActiveState(issue.state) || this.isTerminalState(issue.state)) return false;
-		if (this.state.running.has(issue.id) || this.state.claimed.has(issue.id)) return false;
-		if (!this.hasSlotsFor(issue)) return false;
-		if (normalizeState(issue.state) === "todo") {
-			return !issue.blocked_by.some((blocker) => !blocker.state || !this.isTerminalState(blocker.state));
-		}
-		return true;
+		return evaluateIssueEligibility(issue, runtimeStateFromOrchestratorState(this.state), this.requireConfig()).eligible;
 	}
 
 	private hasSlotsFor(issue: Issue): boolean {
-		if (this.availableGlobalSlots() <= 0) return false;
-		const state = normalizeState(issue.state);
-		const limit = this.requireConfig().agent.maxConcurrentAgentsByState[state] ?? this.requireConfig().agent.maxConcurrentAgents;
-		const runningInState = [...this.state.running.values()].filter((entry) => normalizeState(entry.issue.state) === state).length;
-		return runningInState < limit;
+		const result = evaluateIssueEligibility(issue, runtimeStateFromOrchestratorState(this.state), this.requireConfig());
+		return !result.reasons.some((reason) => reason.code === "no_global_slots" || reason.code === "state_limit_reached");
 	}
 
 	private availableGlobalSlots(): number {

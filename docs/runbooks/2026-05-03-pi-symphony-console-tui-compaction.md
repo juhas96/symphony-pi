@@ -1,0 +1,23 @@
+# pi-symphony-console-tui-compaction
+
+Date: 2026-05-03
+Source: MemPalace
+Room: pi-symphony-console-tui-compaction
+Shared by: pi-coding-agent
+
+## Summary
+
+SESSION:2026-05-03|PROJ:pi-symphony|USER.req:continue/finish pi-symphony-797 + compaction.save.all|*fierce* delivered.v1.complete|DISCOVERY:read pi docs+examples:TUI ctx.ui.custom/@mariozechner/pi-tui OK; OpenTUI external NOT fit embedded pi overlay|DECISIONS:single /symphony only; no /symphony:* compat; /symphony opens console no daemon autostart; args {workflowPath,--workflow,--port}; daemon persists after console close; session_shutdown stops; all controls inside TUI; state memory-only; th...
+
+## Details
+
+SESSION:2026-05-03|PROJ:pi-symphony|USER.req:continue/finish pi-symphony-797 + compaction.save.all|*fierce* delivered.v1.complete|DISCOVERY:read pi docs+examples:TUI ctx.ui.custom/@mariozechner/pi-tui OK; OpenTUI external NOT fit embedded pi overlay|DECISIONS:single /symphony only; no /symphony:* compat; /symphony opens console no daemon autostart; args {workflowPath,--workflow,--port}; daemon persists after console close; session_shutdown stops; all controls inside TUI; state memory-only; theme adapter+unicode+responsive|UX:tabs Overview/Queue/Running/Issue/Logs/Runs/Config/Help; keys Tab/S-Tab/1-8; / filter; ? Help; q close; Esc mode/back; a contextual actions; d daemon toggle; s stop; r refresh; R reload; x selected run-once; X first eligible; f logs follow; PgUp/PgDn/Up/Down scroll|QUEUE:tracker-generic groups Ready/Not dispatchable/Retry; eligibility reasons exposed; run-once blocked while daemon running|IMPL:src/eligibility.ts pure sortIssuesForDispatch/evaluateIssueEligibility; src/orchestrator.ts uses helpers+queueSnapshot+retry rows+metadata lastReloadAt/workflowDir/trackerKind/max agents/poll; src/commands.ts registers only /symphony + runtime controls + footer; src/tui/{console,data,format}.ts full-screen overlay|DOCS:docs/decisions/2026-05-03-symphony-console-tui-final.md canonical; README,runbook,llm-developer-setup,validation-matrix,smoke updated|TESTS:commands.test now single cmd+parse args+console render; orchestrator-conformance includes pure eligibility helper; docs/package updated|DEBUG:test flake caused by separate new test files running parallel with codex fake app-server port/timeouts; fixed by merging TUI/eligibility tests into existing files/removing new test files|VERIFY:npm run check PASS; npm test PASS 61; npm run smoke:pi-extension PASS|BEADS:pi-symphony-797 created/claimed/closed done|MEM:team docs exist; drawer+diary filed|★★★★★
+
+## Why this matters for the team
+
+- Provides repeatable operational steps for teammates.
+- Reduces reliance on individual memory during incidents or deployments.
+
+## Follow-ups
+
+- [ ] SESSION:2026-05-03|PROJ:pi-symphony|USER.req:continue/finish pi-symphony-797 + compaction.save.all|*fierce* delivered.v1.complete|DISCOVERY:read pi docs+examples:TUI ctx.ui.custom/@mariozechner/pi-tui OK; OpenTUI external NOT fit embedded pi overlay|DECISIONS:single /symphony only; no /symphony:* compat; /symphony opens console no daemon autostart; args {workflowPath,--workflow,--port}; daemon persists after console close; session_shutdown stops; all controls inside TUI; state memory-only; theme adapter+unicode+responsive|UX:tabs Overview/Queue/Running/Issue/Logs/Runs/Config/Help; keys Tab/S-Tab/1-8; / filter; ? Help; q close; Esc mode/back; a contextual actions; d daemon toggle; s stop; r refresh; R reload; x selected run-once; X first eligible; f logs follow; PgUp/PgDn/Up/Down scroll|QUEUE:tracker-generic groups Ready/Not dispatchable/Retry; eligibility reasons exposed; run-once blocked while daemon running|IMPL:src/eligibility.ts pure sortIssuesForDispatch/evaluateIssueEligibility; src/orchestrator.ts uses helpers+queueSnapshot+retry rows+metadata lastReloadAt/workflowDir/trackerKind/max agents/poll; src/commands.ts registers only /symphony + runtime controls + footer; src/tui/{console,data,format}.ts full-screen overlay|DOCS:docs/decisions/2026-05-03-symphony-console-tui-final.md canonical; README,runbook,llm-developer-setup,validation-matrix,smoke updated|TESTS:commands.test now single cmd+parse args+console render; orchestrator-conformance includes pure eligibility helper; docs/package updated|DEBUG:test flake caused by separate new test files running parallel with codex fake app-server port/timeouts; fixed by merging TUI/eligibility tests into existing files/removing new test files|VERIFY:npm run check PASS; npm test PASS 61; npm run smoke:pi-extension PASS|BEADS:pi-symphony-797 created/claimed/closed done|MEM:team docs exist; drawer+diary filed|★★★★★

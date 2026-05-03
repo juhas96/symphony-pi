@@ -4,11 +4,36 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { join } from "node:path";
 
+import { evaluateIssueEligibility, sortIssuesForDispatch } from "../src/eligibility.js";
 import { createConsoleLogger } from "../src/logger.js";
 import { SymphonyOrchestrator } from "../src/orchestrator.js";
 import type { Issue, Logger, RunningEntry, SymphonyConfig } from "../src/types.js";
 
 const logger = createConsoleLogger("test");
+
+test("pure eligibility helpers sort and explain dispatch reasons", () => {
+	const cfg = baseConfig();
+	cfg.agent = { ...cfg.agent, maxConcurrentAgents: 1, maxConcurrentAgentsByState: { todo: 1 } };
+	const runningTodo = runningEntry(issue("run-1", "ABC-R", { state: "Todo" }));
+	const runtime = {
+		running: [runningTodo],
+		runningIds: new Set(["run-1"]),
+		claimedIds: new Set(["claimed-1"]),
+		completedIds: new Set(["done-1"]),
+		retryingIds: new Set(["retry-1"]),
+	};
+	assert.deepEqual(
+		sortIssuesForDispatch([
+			issue("id-2", "ABC-2", { priority: 2 }),
+			issue("id-1", "ABC-1", { priority: 1 }),
+		]).map((candidate) => candidate.identifier),
+		["ABC-1", "ABC-2"],
+	);
+	assert.equal(evaluateIssueEligibility(issue("ready-1", "ABC-IP", { state: "In Progress" }), { ...runtime, running: [], runningIds: new Set(), claimedIds: new Set(), completedIds: new Set(), retryingIds: new Set() }, cfg).eligible, true);
+	assert.equal(evaluateIssueEligibility(issue("claimed-1", "ABC-C", { state: "In Progress" }), runtime, cfg).reasons.some((reason) => reason.code === "already_claimed"), true);
+	assert.equal(evaluateIssueEligibility(issue("blocked-1", "ABC-B", { state: "Todo", blocked_by: [{ id: "x", identifier: "ABC-X", state: "Todo" }] }), runtime, cfg).reasons.some((reason) => reason.code === "blocked"), true);
+	assert.equal(evaluateIssueEligibility(issue("slot-1", "ABC-S", { state: "In Progress" }), runtime, cfg).reasons.some((reason) => reason.code === "no_global_slots"), true);
+});
 
 test("orchestrator dispatch sorting uses priority, created_at, then identifier", () => {
 	const orchestrator = configuredOrchestrator();

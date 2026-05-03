@@ -9,12 +9,20 @@ import packageJson from "../package.json" with { type: "json" };
 import { main } from "../src/cli.js";
 
 test("package metadata exposes pi extension, files, bin, and runtime dependencies", () => {
+	assert.equal(packageJson.name, "@juhas96/symphony-pi");
+	assert.equal("private" in packageJson, false);
+	assert.equal(packageJson.publishConfig.access, "public");
+	assert.equal(packageJson.repository.url, "git+ssh://git@github.com/juhas96/symphony-pi.git");
+	assert.equal(packageJson.engines.node, ">=22");
 	assert.deepEqual(packageJson.pi.extensions, ["./src/index.ts"]);
-	assert.equal(packageJson.bin["pi-symphony"], "./bin/pi-symphony.mjs");
+	assert.equal(packageJson.bin["pi-symphony"], "bin/pi-symphony.mjs");
 	assert.equal(packageJson.dependencies.liquidjs.startsWith("^"), true);
 	assert.equal(packageJson.dependencies.yaml.startsWith("^"), true);
 	assert.equal(packageJson.dependencies.tsx.startsWith("^"), true);
 	assert.equal("tsx" in packageJson.devDependencies, false);
+	assert.equal(packageJson.peerDependencies["@mariozechner/pi-coding-agent"], "*");
+	assert.equal(packageJson.peerDependencies["@mariozechner/pi-tui"], "*");
+	assert.equal(packageJson.devDependencies["@mariozechner/pi-tui"], "*");
 	assert.equal(packageJson.files.includes("src/"), true);
 	assert.equal(packageJson.files.includes("docs/"), true);
 	assert.equal(packageJson.files.includes("examples/"), true);
@@ -25,13 +33,14 @@ test("package metadata exposes pi extension, files, bin, and runtime dependencie
 	assert.equal(packageJson.scripts["smoke:beads-e2e"], "node --import tsx scripts/smoke-beads-e2e.ts");
 	assert.equal(packageJson.scripts["smoke:linear-live"], "node --import tsx scripts/smoke-linear-live.ts");
 	assert.equal(packageJson.scripts["smoke:jira-live"], "node --import tsx scripts/smoke-jira-live.ts");
+	assert.equal(packageJson.scripts.prepublishOnly, "npm run check && npm test && npm run smoke:pi-extension");
 });
 
 test("local pi package consumption smoke registers extension commands", () => {
 	const commands: string[] = [];
 	symphonyExtension({ registerCommand: (name: string) => commands.push(name), on: () => {} } as never);
 
-	assert.deepEqual(commands, ["symphony:validate", "symphony:once", "symphony:daemon", "symphony:panel", "symphony:stop", "symphony:status"]);
+	assert.deepEqual(commands, ["symphony"]);
 });
 
 test("CLI --help works through exported main and temporary workflow smoke reaches validation", async () => {

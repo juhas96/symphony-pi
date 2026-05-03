@@ -2,7 +2,7 @@
 
 Use this guide when asking an LLM coding agent to install and configure `pi-symphony` in another repository.
 
-`pi-symphony` is a pi package/extension. It loads a repository-owned `WORKFLOW.md`, polls an issue tracker, creates one workspace per issue, launches `codex app-server`, and exposes `/symphony:*` commands in pi.
+`pi-symphony` is a pi package/extension. It loads a repository-owned `WORKFLOW.md`, polls an issue tracker, creates one workspace per issue, launches `codex app-server`, and exposes a single `/symphony` operator console in pi.
 
 ## What the LLM should do
 
@@ -10,8 +10,8 @@ Use this guide when asking an LLM coding agent to install and configure `pi-symp
 2. Install `pi-symphony` into the target repository's project pi settings.
 3. Add a target-repository `WORKFLOW.md` based on the tracker in use.
 4. Add local runtime artifacts to the target repository's `.gitignore`.
-5. Validate with `/symphony:validate`.
-6. Run one safe issue with `/symphony:once` before starting the daemon.
+5. Open `/symphony` and inspect Config validation.
+6. Run one safe issue from the `/symphony` Queue before starting the daemon.
 
 ## Prerequisites
 
@@ -51,10 +51,10 @@ bd init --non-interactive
 From the target repository, install the package into project settings so the team can share the configuration:
 
 ```bash
-pi install -l git:git@github.com:juhas96/symphony-pi.git
+pi install -l npm:@juhas96/symphony-pi
 ```
 
-HTTPS also works:
+GitHub SSH also works:
 
 ```bash
 pi install -l https://github.com/juhas96/symphony-pi
@@ -69,7 +69,7 @@ pi install -l /absolute/path/to/pi-symphony
 To try without writing settings:
 
 ```bash
-pi -e git:git@github.com:juhas96/symphony-pi.git
+pi -e npm:@juhas96/symphony-pi
 ```
 
 Project installs are written under `.pi/settings.json`; commit that file only after reviewing that it references the intended package source. Pin to a tag or commit when you need reproducible team installs.
@@ -142,29 +142,16 @@ Adjust `hooks.after_create` for the target repo. If the target repo uses `mise`,
 Inside pi from the target repository:
 
 ```text
-/symphony:validate
-/symphony:once ISSUE-123
-/symphony:status
+/symphony
+/symphony --port 8080
 ```
 
-`/symphony:once` runs one issue and writes local artifacts under `.symphony/runs/`; it does not start the HTTP dashboard. In pi extension mode, structured logs go to `.symphony/logs/symphony.log`; `/symphony:daemon` opens a full-screen overlay operator panel with agent counts, tokens, rate limits, running issues, retry/backoff queue, dashboard URL, and log path. Press `q`/Esc to close the overlay and use `/symphony:panel` or `/symphony:status` to reopen it. A compact one-line widget remains below the editor.
+`/symphony` opens the full-screen operator console. Use Config to validate, Queue to run once for a safe selected issue (`x`) or first eligible issue (`X`), and Overview/Running/Logs/Runs to observe work. Start the daemon only after a safe one-issue run succeeds by pressing `d` inside the console. Stop it with `s`. Closing the console does not stop the daemon.
 
-Start the daemon only after a safe one-issue run succeeds:
-
-```text
-/symphony:daemon --port 8080
-```
-
-Then open the loopback dashboard:
+Then open the loopback dashboard with `o` or this URL when the daemon was started with a port:
 
 ```text
 http://127.0.0.1:8080/
-```
-
-Stop it with:
-
-```text
-/symphony:stop
 ```
 
 ## Smoke checks for this package checkout
@@ -193,7 +180,7 @@ PI_SYMPHONY_LIVE_JIRA=1 JIRA_EMAIL=... JIRA_API_TOKEN=... JIRA_ENDPOINT=https://
 ```text
 Set up pi-symphony in this repository for developer use.
 
-Package source: git:git@github.com:juhas96/symphony-pi.git
+Package source: npm:@juhas96/symphony-pi
 
 Requirements:
 1. Review the package docs before installing. Pi packages execute local code.
@@ -202,14 +189,14 @@ Requirements:
 4. Use environment variables for credentials; do not commit tokens or `.env`.
 5. Add `.symphony/runs/`, `.symphony/workspaces/`, `.symphony/logs/`, and `.env` to `.gitignore` if missing.
 6. Configure `hooks.after_create` so each issue workspace contains a fresh checkout/setup of this repo.
-7. Run `/symphony:validate` in pi, then run `/symphony:once <safe-test-issue>` only if I provide a safe issue id.
+7. Run `/symphony` in pi, inspect Config validation, then run once for `<safe-test-issue>` from Queue only if I provide a safe issue id.
 8. Report exactly what files changed and what manual secrets/env vars I must set.
 ```
 
 ## Troubleshooting
 
 - `codex app-server` missing: install/authenticate Codex CLI and verify `codex app-server generate-json-schema --out /tmp/codex-schema` works.
-- `/symphony:*` commands missing: restart pi from the target repo and check `pi list` includes the package.
+- `/symphony` command missing: restart pi from the target repo and check `pi list` includes the package.
 - Linear validates but finds no work: verify the issue is assigned to the configured Linear project `project_slug` (not just the team), its state name is included in `active_states`, and the token has access.
 - Jira validates but finds no work: verify `JIRA_ENDPOINT`, `project_key` or `jql`, and status names.
 - Workspaces are empty: fix `hooks.after_create`; pi-symphony only creates the directory unless the hook clones/bootstrap the repo.

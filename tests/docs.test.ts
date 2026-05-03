@@ -17,9 +17,10 @@ test("operator docs and examples cover trackers, security, runbook, and real int
 	assert.match(security, /Trust boundary/);
 	assert.match(security, /User-input policy/);
 	assert.match(security, /Hook trust/);
-	assert.match(runbook, /\/symphony:validate/);
-	assert.match(runbook, /\/symphony:once/);
-	assert.match(runbook, /\/symphony:daemon/);
+	assert.match(runbook, /\/symphony/);
+	assert.doesNotMatch(runbook, /\/symphony:validate/);
+	assert.doesNotMatch(runbook, /\/symphony:once/);
+	assert.doesNotMatch(runbook, /\/symphony:daemon/);
 	assert.match(runbook, /\/api\/v1\/state/);
 	assert.match(runbook, /Real integration profile/);
 	assert.match(runbook, /\.symphony\/runs/);
@@ -32,8 +33,10 @@ test("operator docs and examples cover trackers, security, runbook, and real int
 	assert.match(runbook, /npm run smoke:jira-live/);
 	assert.match(trackerExtensions, /implementation-defined tracker extensions/i);
 	assert.match(llmSetup, /LLM developer setup guide/);
-	assert.match(llmSetup, /pi install -l git:git@github\.com:juhas96\/symphony-pi\.git/);
-	assert.match(llmSetup, /\/symphony:validate/);
+	assert.match(llmSetup, /pi install -l npm:@juhas96\/symphony-pi/);
+	assert.match(llmSetup, /https:\/\/github\.com\/juhas96\/symphony-pi/);
+	assert.match(llmSetup, /\/symphony/);
+	assert.doesNotMatch(llmSetup, /\/symphony:\*/);
 	assert.match(llmSetup, /WORKFLOW\.md/);
 });
 

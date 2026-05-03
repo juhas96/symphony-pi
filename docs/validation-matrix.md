@@ -47,6 +47,6 @@ Latest local profile on 2026-05-03:
 - `npm run smoke:codex-schema`: passed against generated Codex 0.128.0 schemas, including `thread/name/set`, approval request/response, user-input, and dynamic tool-call shapes.
 - `npm run smoke:codex-app-server`: passed a real minimal app-server turn.
 - `npm run smoke:beads-e2e`: passed against a temporary Beads repo.
-- `npm run smoke:pi-extension`: passed package load and `/symphony:validate`.
+- `npm run smoke:pi-extension`: passed package load and single `/symphony` command registration.
 - `npm run smoke:linear-live`: passed against Linear project slugId `2a0adbaa8b1f`; read-only profile reported `candidates=0`, `terminal=29`, and refreshed `FVC-35`.
 - `npm run smoke:jira-live`: skipped; required opt-in env/Jira credentials were unavailable.

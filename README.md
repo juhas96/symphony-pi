@@ -15,17 +15,23 @@ pi-symphony extensions beyond the OpenAI spec:
 
 All trackers normalize into the Symphony `Issue` model, so orchestration/workspaces/prompts remain tracker-independent.
 
-## Commands
+## Command
 
-- `/symphony:validate [path-to-WORKFLOW.md]`
-- `/symphony:once [issue-id-or-key] [path-to-WORKFLOW.md]`
-- `/symphony:daemon [--port PORT] [path-to-WORKFLOW.md]`
-- `/symphony:stop`
-- `/symphony:status`
+```text
+/symphony [--port PORT] [path-to-WORKFLOW.md]
+```
+
+`/symphony` opens the full-screen operator console. Start/stop daemon mode, run once, validate/reload config, inspect queue/running/runs/logs, and open dashboard/artifacts from inside the TUI.
 
 ## Installation / pi package consumption
 
-Install from GitHub into another repository's project pi settings:
+Install from npm into another repository's project pi settings:
+
+```bash
+pi install -l npm:@juhas96/symphony-pi
+```
+
+Install from GitHub instead:
 
 ```bash
 pi install -l git:git@github.com:juhas96/symphony-pi.git
@@ -41,7 +47,7 @@ Equivalent project settings shape:
 
 ```json
 {
-  "packages": ["git:git@github.com:juhas96/symphony-pi.git"]
+  "packages": ["npm:@juhas96/symphony-pi"]
 }
 ```
 
@@ -63,7 +69,7 @@ Local package smoke:
 npm run smoke:pi-extension
 ```
 
-The smoke starts pi in RPC mode with this package loaded via `--extension`, creates a temporary Beads-backed `WORKFLOW.md`, verifies the five `/symphony:*` commands are registered, and invokes `/symphony:validate`. It skips with an explicit message when `pi` is unavailable.
+The smoke starts pi in RPC mode with this package loaded via `--extension`, creates a temporary Beads-backed `WORKFLOW.md`, and verifies the single `/symphony` command is registered. It skips with an explicit message when `pi` is unavailable.
 
 Known limitations:
 
@@ -76,11 +82,11 @@ For a copy/paste guide that an LLM coding agent can follow in a target repositor
 
 Shortest path:
 
-1. Install this package with `pi install -l git:git@github.com:juhas96/symphony-pi.git`.
+1. Install this package with `pi install -l npm:@juhas96/symphony-pi` or `pi install -l git:git@github.com:juhas96/symphony-pi.git`.
 2. Copy and customize one of `examples/WORKFLOW.*.md` as the target repo's `WORKFLOW.md`.
 3. Set tracker credentials in exported environment variables or the target repo's ignored `.env`, not in git.
 4. Add `.env`, `.symphony/runs/`, and `.symphony/workspaces/` to the target repo's `.gitignore`.
-5. Run `/symphony:validate`, then `/symphony:once <safe-issue-id>`.
+5. Run `/symphony`, inspect Config, then run once for a safe issue from inside the console.
 
 ## CLI host
 
@@ -168,13 +174,15 @@ Implement task {{ issue.identifier }}: {{ issue.title }}.
 
 ## HTTP dashboard/API
 
-`/symphony:once` runs a single issue and writes artifacts under `.symphony/runs/`; it does not start the dashboard. In pi extension mode, structured Symphony logs are written to `.symphony/logs/symphony.log`; `/symphony:daemon` opens a full-screen overlay operator panel with agent counts, tokens, rate-limit state, running issues, retry/backoff queue, dashboard URL, and log path instead of dumping logs into the chat transcript. Press `q`/Esc to close the overlay and run `/symphony:panel` or `/symphony:status` to reopen it. A compact one-line widget remains below the editor. Start `/symphony:daemon --port PORT` for a dashboard and scheduler.
+The `/symphony` console can run a single selected issue, start/stop daemon scheduling, inspect live workers, tail `.symphony/logs/symphony.log`, and browse `.symphony/runs/` artifacts. Closing the console does not stop the daemon; stop it explicitly inside the TUI. Start `/symphony --port PORT` or set `server.port` for a browser dashboard.
 
-When `server.port` is configured, or `/symphony:daemon --port PORT` / CLI `--port PORT` is used, pi-symphony binds loopback and exposes:
+When `server.port` is configured, or `/symphony --port PORT` / CLI `--port PORT` is used, pi-symphony binds loopback and exposes:
 
 - `GET /` — human-readable dashboard.
 - `GET /api/v1/state` — runtime snapshot.
+- `GET /api/v1/queue` — eligibility-backed queue snapshot.
 - `GET /api/v1/<issue_identifier>` — issue-specific runtime state for currently tracked issues.
+- `GET /issue/<issue_identifier>` — visual issue telemetry page.
 - `POST /api/v1/refresh` — best-effort immediate poll/reconcile trigger.
 
 Use port `0` for an ephemeral test port.
