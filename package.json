@@ -1,0 +1,57 @@
+{
+  "name": "pi-symphony",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Generic Symphony autonomous issue orchestration extension for pi.",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "symphony",
+    "automation"
+  ],
+  "bin": {
+    "pi-symphony": "./bin/pi-symphony.mjs"
+  },
+  "files": [
+    "bin/",
+    "docs/",
+    "examples/",
+    "scripts/",
+    "src/",
+    "README.md"
+  ],
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "build": "echo 'pi loads TypeScript extensions directly; no build required'",
+    "cli": "node --import tsx src/cli.ts",
+    "smoke:pi-extension": "node scripts/smoke-pi-extension.mjs",
+    "smoke:codex-schema": "node scripts/check-codex-schema.mjs",
+    "smoke": "npm run smoke:pi-extension && npm run smoke:codex-schema && npm run smoke:codex-app-server && npm run smoke:beads-e2e",
+    "smoke:codex-app-server": "node --import tsx scripts/smoke-codex-app-server.ts",
+    "smoke:beads-e2e": "node --import tsx scripts/smoke-beads-e2e.ts",
+    "smoke:linear-live": "node --import tsx scripts/smoke-linear-live.ts",
+    "smoke:jira-live": "node --import tsx scripts/smoke-jira-live.ts",
+    "smoke:live": "npm run smoke:linear-live && npm run smoke:jira-live"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@mariozechner/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@mariozechner/pi-coding-agent": "*",
+    "@types/node": "^24.0.0",
+    "fallow": "^2.62.0",
+    "typescript": "^5.9.0"
+  },
+  "dependencies": {
+    "liquidjs": "^10.25.7",
+    "tsx": "^4.20.5",
+    "yaml": "^2.8.4"
+  }
+}

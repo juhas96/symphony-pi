@@ -3,9 +3,19 @@ dist/
 coverage/
 .symphony/runs/
 .symphony/workspaces/
+
+# Local pi/opencode runtime artifacts
+.oh-my-opencode-pi-debug/
+.oh-my-opencode-pi-stats.json
+.oh-my-opencode-pi-workflow.json
+
+# Local fallow cache
+.fallow/
+
 .DS_Store
 
 # Beads / Dolt files (added by bd init)
 .dolt/
 *.db
 .beads-credential-key
+.env
