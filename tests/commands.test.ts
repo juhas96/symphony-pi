@@ -18,6 +18,7 @@ test("registerSymphonyCommands registers v1 slash commands", () => {
 		"symphony:validate",
 		"symphony:once",
 		"symphony:daemon",
+		"symphony:panel",
 		"symphony:stop",
 		"symphony:status",
 	]);

@@ -168,7 +168,7 @@ Implement task {{ issue.identifier }}: {{ issue.title }}.
 
 ## HTTP dashboard/API
 
-`/symphony:once` runs a single issue and writes artifacts under `.symphony/runs/`; it does not start the dashboard. In pi extension mode, structured Symphony logs are written to `.symphony/logs/symphony.log`; a live Symphony status panel below the editor shows agent counts, tokens, rate-limit state, running issues, retry/backoff queue, dashboard URL, and log path instead of dumping logs into the chat transcript. Start `/symphony:daemon --port PORT` for a dashboard and scheduler.
+`/symphony:once` runs a single issue and writes artifacts under `.symphony/runs/`; it does not start the dashboard. In pi extension mode, structured Symphony logs are written to `.symphony/logs/symphony.log`; `/symphony:daemon` opens a full-screen overlay operator panel with agent counts, tokens, rate-limit state, running issues, retry/backoff queue, dashboard URL, and log path instead of dumping logs into the chat transcript. Press `q`/Esc to close the overlay and run `/symphony:panel` or `/symphony:status` to reopen it. A compact one-line widget remains below the editor. Start `/symphony:daemon --port PORT` for a dashboard and scheduler.
 
 When `server.port` is configured, or `/symphony:daemon --port PORT` / CLI `--port PORT` is used, pi-symphony binds loopback and exposes:
 

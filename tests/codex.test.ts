@@ -110,6 +110,17 @@ test("Codex client fails user-input-required server requests without waiting for
 	assert.equal(Date.now() - started < 900, true);
 });
 
+test("Codex client handles AbortSignal shutdown without unhandled child process errors", async () => {
+	const { workspace, command } = await setupFake("turn-timeout");
+	const client = new CodexAppServerClient(config(workspace, command, { readTimeoutMs: 1_000, turnTimeoutMs: 1_000 }), createConsoleLogger("test"));
+	const abort = new AbortController();
+	const run = client.runWorker({ workspacePath: workspace, issue: issue(), prompt: "Do work", continuationPrompts: [], onEvent: () => {}, signal: abort.signal });
+
+	setTimeout(() => abort.abort(), 25).unref();
+
+	await assert.rejects(() => run, /turn_cancelled/);
+});
+
 test("Codex client auto-approves high-trust approval requests", async () => {
 	const { workspace, command, logPath } = await setupFake("approval-request");
 	const events: CodexRuntimeEvent[] = [];

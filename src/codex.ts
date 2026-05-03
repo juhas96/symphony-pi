@@ -78,14 +78,20 @@ export class CodexAppServerClient {
 			const text = chunk.toString("utf8").trim();
 			if (text) this.logger.debug("codex stderr", { message: text.slice(0, 2_000), ...this.activeSession });
 		});
-		this.proc.on("exit", (code, sig) => {
-			const error = new Error(`port_exit: codex app-server exited code=${code} signal=${sig}`);
+		const rejectActiveRequests = (error: Error) => {
 			for (const pending of this.pending.values()) {
 				clearTimeout(pending.timer);
 				pending.reject(error);
 			}
 			this.pending.clear();
 			for (const handler of [...this.processExitHandlers]) handler(error);
+		};
+		this.proc.on("error", (error) => {
+			this.logger.debug("codex process error", { error: errorMessage(error), ...this.activeSession });
+			rejectActiveRequests(normalizeProcessError(error));
+		});
+		this.proc.on("exit", (code, sig) => {
+			rejectActiveRequests(new Error(`port_exit: codex app-server exited code=${code} signal=${sig}`));
 		});
 		this.rl = createInterface({ input: this.proc.stdout });
 		this.rl.on("line", (line) => this.handleLine(line));
@@ -351,6 +357,11 @@ function issueDisplayName(issue: Issue): string {
 
 function errorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
+}
+
+function normalizeProcessError(error: unknown): Error {
+	if (error instanceof Error && (error.name === "AbortError" || (error as NodeJS.ErrnoException).code === "ABORT_ERR")) return new Error("turn_cancelled");
+	return error instanceof Error ? error : new Error(String(error));
 }
 
 function extractId(value: any): string | null {

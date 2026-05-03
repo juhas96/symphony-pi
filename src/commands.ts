@@ -7,11 +7,13 @@ import { loadResolvedConfig, probeConfig, resolveWorkflowPath, validateDispatchC
 import { createFileLogger } from "./logger.js";
 import { SymphonyOrchestrator } from "./orchestrator.js";
 
+type SymphonyPanelHandle = { hide(): void; focus(): void };
 type SymphonyUiContext = {
 	ui: {
 		notify(message: string, type?: "info" | "warning" | "error" | "success"): void;
 		setStatus(id: string, value: string | undefined): void;
 		setWidget(id: string, value: string[] | undefined, options?: { placement?: "aboveEditor" | "belowEditor" }): void;
+		custom<T>(factory: (_tui: unknown, _theme: unknown, _keybindings: unknown, done: (result: T) => void) => SymphonyPanel, options?: unknown): Promise<T>;
 	};
 };
 
@@ -35,8 +37,30 @@ type SymphonySnapshot = {
 
 let daemon: SymphonyOrchestrator | null = null;
 let daemonStartedAt: number | null = null;
-let daemonWidgetTimer: NodeJS.Timeout | null = null;
+let widgetTimer: NodeJS.Timeout | null = null;
+let panelTimer: NodeJS.Timeout | null = null;
+let panelHandle: SymphonyPanelHandle | null = null;
 let onceRun: { selector?: string; workflowPath?: string; startedAt: string } | null = null;
+
+class SymphonyPanel {
+	constructor(
+		private readonly getLines: () => string[],
+		private readonly onClose: () => void,
+		private readonly onRefresh: () => void,
+	) {}
+
+	render(width: number): string[] {
+		const usableWidth = Math.max(width - 2, 20);
+		return this.getLines().map((line) => truncateLine(line, usableWidth));
+	}
+
+	handleInput(data: string): void {
+		if (data === "q" || data === "Q" || data === "\u001b") this.onClose();
+		else if (data === "r" || data === "R") this.onRefresh();
+	}
+
+	invalidate(): void {}
+}
 
 export function registerSymphonyCommands(pi: ExtensionAPI): void {
 	pi.registerCommand("symphony:validate", {
@@ -71,8 +95,9 @@ export function registerSymphonyCommands(pi: ExtensionAPI): void {
 			onceRun = { selector, workflowPath, startedAt: new Date().toISOString() };
 			try {
 				setSymphonyStatus(ctx, `once${selector ? ` ${selector}` : ""}`);
-				ctx.ui.setWidget("symphony", onceWidgetLines(selector, logPath), { placement: "belowEditor" });
-				ctx.ui.notify(`Symphony once starting${selector ? ` for ${selector}` : ""}. Log: ${logPath}`, "info");
+				openStaticPanel(ctx, oncePanelLines(selector, logPath));
+				ctx.ui.setWidget("symphony", compactOnceWidgetLines(selector, logPath), { placement: "belowEditor" });
+				ctx.ui.notify(`Symphony once starting${selector ? ` for ${selector}` : ""}. Full-screen panel opened. Log: ${logPath}`, "info");
 				const result = await orchestrator.runOnce(selector);
 				ctx.ui.notify(formatOnceResult("completed", result.artifactPath), "info");
 			} catch (error) {
@@ -89,6 +114,7 @@ export function registerSymphonyCommands(pi: ExtensionAPI): void {
 		description: "Start the Symphony daemon scheduler. Pass optional path-to-WORKFLOW.md",
 		handler: async (args, ctx) => {
 			if (daemon) {
+				openDaemonPanel(ctx, await loadWidgetConfig(ctx.cwd, args.trim() || undefined));
 				ctx.ui.notify(formatDaemonAlreadyRunning(daemon), "warning");
 				return;
 			}
@@ -97,18 +123,33 @@ export function registerSymphonyCommands(pi: ExtensionAPI): void {
 			daemon = new SymphonyOrchestrator(ctx.cwd, parsed.workflowPath, createFileLogger(logPath), { portOverride: parsed.port });
 			try {
 				await daemon.start();
-				const { config } = await loadResolvedConfig(ctx.cwd, parsed.workflowPath);
+				const config = await loadWidgetConfig(ctx.cwd, parsed.workflowPath);
 				daemonStartedAt = Date.now();
-				const widgetConfig = { trackerKind: config.tracker.kind, projectSlug: config.tracker.projectSlug || config.tracker.jiraProjectKey, activeStates: config.tracker.activeStates, maxAgents: config.agent.maxConcurrentAgents, logPath };
 				setSymphonyStatus(ctx, "daemon running");
-				startDaemonWidget(ctx, widgetConfig);
-				ctx.ui.notify(formatDaemonStarted(daemon, widgetConfig), "info");
+				startCompactWidget(ctx, config);
+				openDaemonPanel(ctx, config);
+				ctx.ui.notify(formatDaemonStarted(daemon, config), "info");
 			} catch (error) {
 				daemon = null;
 				daemonStartedAt = null;
-				stopDaemonWidget(ctx);
+				stopCompactWidget(ctx);
+				closePanel();
 				ctx.ui.notify(`Symphony daemon failed to start: ${error instanceof Error ? error.message : String(error)}`, "error");
 			}
+		},
+	});
+
+	pi.registerCommand("symphony:panel", {
+		description: "Open the full-screen Symphony operator panel",
+		handler: async (args, ctx) => {
+			const workflowPath = args.trim() || undefined;
+			if (daemon) {
+				openDaemonPanel(ctx, await loadWidgetConfig(ctx.cwd, workflowPath));
+				ctx.ui.notify("Symphony panel opened. Press q or Esc to close.", "info");
+				return;
+			}
+			openStaticPanel(ctx, await formatNoDaemonStatusLines(ctx.cwd, workflowPath));
+			ctx.ui.notify("Symphony daemon is not running. Panel opened with recent runs.", "info");
 		},
 	});
 
@@ -122,25 +163,25 @@ export function registerSymphonyCommands(pi: ExtensionAPI): void {
 			await daemon.stop();
 			daemon = null;
 			daemonStartedAt = null;
-			stopDaemonWidget(ctx);
+			stopCompactWidget(ctx);
+			closePanel();
 			ctx.ui.notify("Symphony daemon stopped", "info");
 		},
 	});
 
 	pi.registerCommand("symphony:status", {
-		description: "Show Symphony daemon status and recent local runs",
+		description: "Open Symphony operator panel and refresh compact status",
 		handler: async (args, ctx) => {
 			const workflowPath = args.trim() || undefined;
 			if (daemon) {
-				const { config } = await loadResolvedConfig(ctx.cwd, workflowPath);
-				const logPath = symphonyLogPath(ctx.cwd, workflowPath);
-				const widgetConfig = { trackerKind: config.tracker.kind, projectSlug: config.tracker.projectSlug || config.tracker.jiraProjectKey, activeStates: config.tracker.activeStates, maxAgents: config.agent.maxConcurrentAgents, logPath };
-				ctx.ui.setWidget("symphony", daemonWidgetLines(daemon, widgetConfig), { placement: "belowEditor" });
-				ctx.ui.notify(`Symphony daemon is running. Dashboard/logs are in the Symphony widget. Log: ${logPath}`, "info");
+				const config = await loadWidgetConfig(ctx.cwd, workflowPath);
+				ctx.ui.setWidget("symphony", compactDaemonWidgetLines(daemon, config), { placement: "belowEditor" });
+				openDaemonPanel(ctx, config);
+				ctx.ui.notify(`Symphony daemon is running. Panel opened. Log: ${config.logPath}`, "info");
 				return;
 			}
-			ctx.ui.setWidget("symphony", await formatNoDaemonStatusLines(ctx.cwd, workflowPath), { placement: "belowEditor" });
-			ctx.ui.notify("Symphony daemon is not running. See Symphony widget for recent runs and start command.", "info");
+			openStaticPanel(ctx, await formatNoDaemonStatusLines(ctx.cwd, workflowPath));
+			ctx.ui.notify("Symphony daemon is not running. Panel opened with recent runs.", "info");
 		},
 	});
 
@@ -148,8 +189,11 @@ export function registerSymphonyCommands(pi: ExtensionAPI): void {
 		if (daemon) await daemon.stop();
 		daemon = null;
 		daemonStartedAt = null;
-		if (daemonWidgetTimer) clearInterval(daemonWidgetTimer);
-		daemonWidgetTimer = null;
+		if (widgetTimer) clearInterval(widgetTimer);
+		if (panelTimer) clearInterval(panelTimer);
+		widgetTimer = null;
+		panelTimer = null;
+		panelHandle = null;
 	});
 }
 
@@ -177,48 +221,125 @@ function parseDaemonArgs(args: string): { workflowPath?: string; port?: number }
 	return { workflowPath: positional[0], port };
 }
 
+async function loadWidgetConfig(cwd: string, workflowPath?: string): Promise<WidgetConfig> {
+	const { config } = await loadResolvedConfig(cwd, workflowPath);
+	return {
+		trackerKind: config.tracker.kind,
+		projectSlug: config.tracker.projectSlug || config.tracker.jiraProjectKey,
+		activeStates: config.tracker.activeStates,
+		maxAgents: config.agent.maxConcurrentAgents,
+		logPath: symphonyLogPath(cwd, workflowPath),
+	};
+}
+
 function symphonyLogPath(cwd: string, workflowPath?: string): string {
 	return join(dirname(resolveWorkflowPath(cwd, workflowPath)), ".symphony", "logs", "symphony.log");
 }
 
-function setSymphonyStatus(ctx: SymphonyUiContext, value: string | undefined): void {
-	ctx.ui.setStatus("symphony", value ? `♪ ${value}` : undefined);
+function symphonyUi(ctx: unknown): SymphonyUiContext["ui"] {
+	return (ctx as SymphonyUiContext).ui;
 }
 
-function startDaemonWidget(ctx: SymphonyUiContext, config: WidgetConfig): void {
-	if (daemonWidgetTimer) clearInterval(daemonWidgetTimer);
-	ctx.ui.setWidget("symphony", daemon ? daemonWidgetLines(daemon, config) : undefined, { placement: "belowEditor" });
-	daemonWidgetTimer = setInterval(() => {
+function setSymphonyStatus(ctx: unknown, value: string | undefined): void {
+	symphonyUi(ctx).setStatus("symphony", value ? `♪ ${value}` : undefined);
+}
+
+function startCompactWidget(ctx: unknown, config: WidgetConfig): void {
+	const ui = symphonyUi(ctx);
+	if (widgetTimer) clearInterval(widgetTimer);
+	if (daemon) ui.setWidget("symphony", compactDaemonWidgetLines(daemon, config), { placement: "belowEditor" });
+	widgetTimer = setInterval(() => {
 		if (!daemon) return;
-		ctx.ui.setWidget("symphony", daemonWidgetLines(daemon, config), { placement: "belowEditor" });
+		ui.setWidget("symphony", compactDaemonWidgetLines(daemon, config), { placement: "belowEditor" });
 	}, 1_000);
 }
 
-function stopDaemonWidget(ctx: SymphonyUiContext): void {
-	if (daemonWidgetTimer) clearInterval(daemonWidgetTimer);
-	daemonWidgetTimer = null;
+function stopCompactWidget(ctx: unknown): void {
+	const ui = symphonyUi(ctx);
+	if (widgetTimer) clearInterval(widgetTimer);
+	widgetTimer = null;
 	setSymphonyStatus(ctx, undefined);
-	ctx.ui.setWidget("symphony", undefined);
+	ui.setWidget("symphony", undefined);
+}
+
+function openDaemonPanel(ctx: unknown, config: WidgetConfig): void {
+	openPanel(
+		ctx,
+		() => (daemon ? daemonPanelLines(daemon, config) : ["╭─ SYMPHONY STATUS", "│ Daemon stopped", "╰─"]),
+		true,
+	);
+}
+
+function openStaticPanel(ctx: unknown, lines: string[]): void {
+	openPanel(ctx, () => lines, false);
+}
+
+function openPanel(ctx: unknown, getLines: () => string[], live: boolean): void {
+	const ui = symphonyUi(ctx);
+	closePanel();
+	void ui.custom<void>(
+		(_tui: unknown, _theme: unknown, _keybindings: unknown, done: (result: void) => void) => new SymphonyPanel(getLines, () => {
+			closePanel();
+			done();
+		}, () => panelHandle?.focus()),
+		{
+			overlay: true,
+			overlayOptions: {
+				width: "100%",
+				maxHeight: "95%",
+				anchor: "center",
+				margin: 1,
+			},
+			onHandle: (handle: SymphonyPanelHandle) => {
+				panelHandle = handle;
+			},
+		},
+	);
+	if (live) panelTimer = setInterval(() => panelHandle?.focus(), 1_000);
+}
+
+function closePanel(): void {
+	if (panelTimer) clearInterval(panelTimer);
+	panelTimer = null;
+	const handle = panelHandle;
+	panelHandle = null;
+	handle?.hide();
 }
 
 function formatDaemonStarted(orchestrator: SymphonyOrchestrator, config: WidgetConfig): string {
 	const http = orchestrator.getHttpAddress();
 	const dashboard = http.enabled && http.port !== null ? ` Dashboard: http://127.0.0.1:${http.port}/` : " Dashboard disabled; pass --port 8080 or set server.port.";
-	return `Symphony daemon started.${dashboard} Widget refreshes every second. Log: ${config.logPath}`;
+	return `Symphony daemon started.${dashboard} Full-screen panel opened; press q/Esc to close, /symphony:panel to reopen. Log: ${config.logPath}`;
 }
 
-function onceWidgetLines(selector: string | undefined, logPath: string): string[] {
+function compactOnceWidgetLines(selector: string | undefined, logPath: string): string[] {
+	return [`♪ Symphony once: ${selector ?? "first eligible"} · log ${logPath} · /symphony:panel opens details`];
+}
+
+function oncePanelLines(selector: string | undefined, logPath: string): string[] {
 	return [
 		"╭─ SYMPHONY ONCE",
 		`│ Issue: ${selector ?? "first eligible"}`,
 		"│ Dashboard: not started for /once",
 		`│ Log: ${logPath}`,
 		"│ Artifacts: .symphony/runs/",
+		"│ Keys: q/Esc close · r refresh",
 		"╰─ Running single issue",
 	];
 }
 
-function daemonWidgetLines(orchestrator: SymphonyOrchestrator, config: WidgetConfig): string[] {
+function compactDaemonWidgetLines(orchestrator: SymphonyOrchestrator, config: WidgetConfig): string[] {
+	const snapshot = orchestrator.snapshot() as SymphonySnapshot;
+	const running = snapshot.counts?.running ?? snapshot.running?.length ?? 0;
+	const retrying = snapshot.counts?.retrying ?? snapshot.retrying?.length ?? 0;
+	const totals = snapshot.codex_totals ?? {};
+	const http = snapshot.http?.enabled && snapshot.http.port !== null && snapshot.http.port !== undefined ? `http://127.0.0.1:${snapshot.http.port}/` : "dashboard off";
+	return [
+		`♪ Symphony: ${running}/${config.maxAgents} running · ${retrying} backoff · tokens ${formatInt(totals.total_tokens)} · ${http} · /symphony:panel`,
+	];
+}
+
+function daemonPanelLines(orchestrator: SymphonyOrchestrator, config: WidgetConfig): string[] {
 	const snapshot = orchestrator.snapshot() as SymphonySnapshot;
 	const running = snapshot.counts?.running ?? snapshot.running?.length ?? 0;
 	const retrying = snapshot.counts?.retrying ?? snapshot.retrying?.length ?? 0;
@@ -234,22 +355,23 @@ function daemonWidgetLines(orchestrator: SymphonyOrchestrator, config: WidgetCon
 		`│ Project: ${config.projectSlug || "n/a"}`,
 		`│ Dashboard: ${http}`,
 		`│ Log: ${config.logPath}`,
+		"│ Keys: q/Esc close · r refresh · /symphony:stop stops daemon",
 		"├─ Running",
 		"│ ID        STAGE        PID       AGE / TURN   TOKENS       SESSION       EVENT",
 		"│ ─────────────────────────────────────────────────────────────────────────────",
 	];
 
-	const runningRows = (snapshot.running ?? []).slice(0, 12);
+	const runningRows = (snapshot.running ?? []).slice(0, 20);
 	if (runningRows.length === 0) lines.push("│ No running agents");
 	for (const row of runningRows) lines.push(formatRunningRow(row));
 	if ((snapshot.running?.length ?? 0) > runningRows.length) lines.push(`│ … ${(snapshot.running?.length ?? 0) - runningRows.length} more running agent(s)`);
 
 	lines.push("├─ Backoff queue");
-	const retryRows = (snapshot.retrying ?? []).slice(0, 8);
+	const retryRows = (snapshot.retrying ?? []).slice(0, 12);
 	if (retryRows.length === 0) lines.push("│ No queued retries");
 	for (const retry of retryRows) lines.push(formatRetryRow(retry));
 	if ((snapshot.retrying?.length ?? 0) > retryRows.length) lines.push(`│ … ${(snapshot.retrying?.length ?? 0) - retryRows.length} more retry item(s)`);
-	lines.push("╰─ Refreshes every 1s");
+	lines.push("╰─ Live overlay refreshes every 1s");
 	return lines;
 }
 
@@ -260,20 +382,20 @@ function formatRunningRow(row: Record<string, unknown>): string {
 	const event = compactEvent(stringValue(row.last_event), stringValue(row.last_message));
 	return truncateLine(
 		`│ • ${pad(stringValue(row.issue_identifier), 8)} ${pad(stringValue(row.state), 12)} ${pad(stringValue(row.pid) || "-", 9)} ${pad(`${age} / ${numberValue(row.turn_count) ?? 0}`, 12)} ${pad(formatInt(numberValue(tokens?.total_tokens)), 12)} ${pad(session || "-", 13)} ${event}`,
-		160,
+		180,
 	);
 }
 
 function formatRetryRow(row: Record<string, unknown>): string {
 	const dueIn = formatDueIn(stringValue(row.due_at));
 	const error = stringValue(row.error) || stringValue(row.terminal_reason) || "retry";
-	return truncateLine(`│ • ${pad(stringValue(row.issue_identifier), 8)} attempt ${pad(String(numberValue(row.attempt) ?? "?"), 3)} due ${pad(dueIn, 8)} ${error}`, 160);
+	return truncateLine(`│ • ${pad(stringValue(row.issue_identifier), 8)} attempt ${pad(String(numberValue(row.attempt) ?? "?"), 3)} due ${pad(dueIn, 8)} ${error}`, 180);
 }
 
 function formatDaemonAlreadyRunning(orchestrator: SymphonyOrchestrator): string {
 	const http = orchestrator.getHttpAddress();
 	const dashboard = http.enabled && http.port !== null ? ` Dashboard: http://127.0.0.1:${http.port}/` : "";
-	return `Symphony daemon is already running.${dashboard}`;
+	return `Symphony daemon is already running.${dashboard} Panel opened.`;
 }
 
 function formatOnceResult(status: string, artifactPath: string | null): string {
@@ -291,6 +413,7 @@ async function formatNoDaemonStatusLines(cwd: string, workflowPath?: string): Pr
 		pieces.push(`│ Workflow: ${config.workflowPath}`);
 		pieces.push(`│ Tracker: ${config.tracker.kind}; active_states=[${config.tracker.activeStates.join(", ")}]`);
 		pieces.push(`│ Log: ${symphonyLogPath(cwd, workflowPath)}`);
+		pieces.push("│ Keys: q/Esc close");
 		const recent = await recentRuns(dirname(config.workflowPath));
 		pieces.push("├─ Recent runs");
 		if (recent.length > 0) pieces.push(...recent.map((run) => `│ • ${run}`));
@@ -322,7 +445,7 @@ async function recentRuns(workflowDir: string): Promise<string[]> {
 			dirs
 				.filter((dir): dir is { entry: string; full: string; mtimeMs: number } => Boolean(dir))
 				.sort((a, b) => b.mtimeMs - a.mtimeMs)
-				.slice(0, 5)
+				.slice(0, 8)
 				.map(async ({ full }) => `${full}${(await hasResult(full)) ? " (finished)" : " (in progress/no result.json)"}`),
 		);
 	} catch {

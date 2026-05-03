@@ -31,7 +31,7 @@ test("local pi package consumption smoke registers extension commands", () => {
 	const commands: string[] = [];
 	symphonyExtension({ registerCommand: (name: string) => commands.push(name), on: () => {} } as never);
 
-	assert.deepEqual(commands, ["symphony:validate", "symphony:once", "symphony:daemon", "symphony:stop", "symphony:status"]);
+	assert.deepEqual(commands, ["symphony:validate", "symphony:once", "symphony:daemon", "symphony:panel", "symphony:stop", "symphony:status"]);
 });
 
 test("CLI --help works through exported main and temporary workflow smoke reaches validation", async () => {
