@@ -17,6 +17,12 @@ export interface SymphonyOrchestratorOptions {
 	portOverride?: number;
 }
 
+export interface RunOnceResult {
+	issueIdentifier: string;
+	workspacePath: string | null;
+	artifactPath: string | null;
+}
+
 export class SymphonyOrchestrator {
 	readonly state: OrchestratorState;
 	private workflow: WorkflowDefinition | null = null;
@@ -90,14 +96,14 @@ export class SymphonyOrchestrator {
 		this.logger.info("daemon stopped");
 	}
 
-	async runOnce(selector?: string): Promise<void> {
+	async runOnce(selector?: string): Promise<RunOnceResult> {
 		this.stopping = false;
 		await this.reload(true);
 		validateDispatchConfig(this.requireConfig());
 		const issues = await this.tracker.fetchCandidateIssues();
 		const issue = selector ? issues.find((candidate) => candidate.id === selector || candidate.identifier === selector) : this.sortForDispatch(issues).find((candidate) => this.shouldDispatch(candidate));
-		if (!issue) throw new Error(selector ? `No active candidate issue found for ${selector}` : "No dispatch-eligible issue found");
-		await this.dispatchAndWait(issue, null);
+		if (!issue) throw new Error(this.formatNoCandidateError(selector, issues.length));
+		return this.dispatchAndWait(issue, null);
 	}
 
 	async refreshNow(): Promise<void> {
@@ -233,6 +239,16 @@ export class SymphonyOrchestrator {
 		});
 	}
 
+	private formatNoCandidateError(selector: string | undefined, candidateCount: number): string {
+		const config = this.requireConfig();
+		const scope = config.tracker.kind === "linear" ? `Linear project_slug=${config.tracker.projectSlug}` : `${config.tracker.kind} tracker`;
+		const states = config.tracker.activeStates.join(", ");
+		if (selector) {
+			return `No active candidate issue found for ${selector}. Fetched ${candidateCount} candidate(s) from ${scope} with active_states=[${states}]. Ensure the issue is in that project/scope and its state name exactly matches one of active_states.`;
+		}
+		return `No dispatch-eligible issue found. Fetched ${candidateCount} candidate(s) from ${scope} with active_states=[${states}].`;
+	}
+
 	private async startHttpServerIfConfigured(): Promise<void> {
 		const port = this.options.portOverride ?? this.requireConfig().server.port;
 		if (port === undefined) return;
@@ -309,9 +325,14 @@ export class SymphonyOrchestrator {
 		}
 	}
 
-	private dispatchAndWait(issue: Issue, attempt: number | null): Promise<void> {
+	private async dispatchAndWait(issue: Issue, attempt: number | null): Promise<RunOnceResult> {
 		const entry = this.dispatch(issue, attempt);
-		return entry.promise;
+		await entry.promise;
+		return {
+			issueIdentifier: entry.identifier,
+			workspacePath: entry.workspace_path,
+			artifactPath: entry.artifact_path,
+		};
 	}
 
 	private dispatch(issue: Issue, attempt: number | null): RunningEntry {

@@ -77,10 +77,12 @@ export async function loadWorkflow(cwd: string, explicitWorkflowPath?: string): 
 
 export async function loadResolvedConfig(cwd: string, explicitWorkflowPath?: string): Promise<{ workflow: WorkflowDefinition; config: SymphonyConfig }> {
 	const workflow = await loadWorkflow(cwd, explicitWorkflowPath);
-	return { workflow, config: resolveConfig(workflow) };
+	const workflowDir = dirname(workflow.path);
+	const dotenv = await loadDotEnv(workflowDir);
+	return { workflow, config: resolveConfig(workflow, { ...dotenv, ...process.env }) };
 }
 
-export function resolveConfig(workflow: WorkflowDefinition): SymphonyConfig {
+export function resolveConfig(workflow: WorkflowDefinition, env: NodeJS.ProcessEnv = process.env): SymphonyConfig {
 	const root = workflow.config;
 	const workflowDir = dirname(workflow.path);
 	const tracker = objectAt(root, "tracker");
@@ -101,11 +103,11 @@ export function resolveConfig(workflow: WorkflowDefinition): SymphonyConfig {
 	const trackerKind = trackerKindRaw as TrackerKind;
 
 	const apiKeyValue = stringAt(tracker, "api_key", trackerKind === "linear" ? "$LINEAR_API_KEY" : "");
-	const apiKey = resolveDollar(apiKeyValue);
-	const projectSlug = stringAt(tracker, "project_slug", "");
-	const jiraEmail = resolveDollar(stringAt(tracker, "email", "$JIRA_EMAIL"));
-	const jiraApiToken = resolveDollar(stringAt(tracker, "api_token", "$JIRA_API_TOKEN"));
-	const jiraProjectKey = stringAt(tracker, "project_key", projectSlug);
+	const apiKey = resolveDollar(apiKeyValue, env);
+	const projectSlug = resolveDollar(stringAt(tracker, "project_slug", ""), env);
+	const jiraEmail = resolveDollar(stringAt(tracker, "email", "$JIRA_EMAIL"), env);
+	const jiraApiToken = resolveDollar(stringAt(tracker, "api_token", "$JIRA_API_TOKEN"), env);
+	const jiraProjectKey = resolveDollar(stringAt(tracker, "project_key", projectSlug), env);
 	const jiraJql = nullableStringAt(tracker, "jql");
 	const beadsCommand = stringAt(tracker, "command", "bd");
 	const beadsReadyCommand = stringAt(tracker, "ready_command", `${beadsCommand} ready --json`);
@@ -121,7 +123,7 @@ export function resolveConfig(workflow: WorkflowDefinition): SymphonyConfig {
 	}
 
 	const workspaceRootRaw = stringAt(workspace, "root", resolve(tmpdir(), "symphony_workspaces"));
-	const workspaceRoot = resolvePathValue(workspaceRootRaw, workflowDir);
+	const workspaceRoot = resolvePathValue(workspaceRootRaw, workflowDir, env);
 
 	const pollIntervalMs = positiveIntegerAt(polling, "interval_ms", 30_000, "polling.interval_ms");
 	const hookTimeoutMs = positiveIntegerAt(hooks, "timeout_ms", 60_000, "hooks.timeout_ms");
@@ -139,7 +141,7 @@ export function resolveConfig(workflow: WorkflowDefinition): SymphonyConfig {
 		workflowDir,
 		tracker: {
 			kind: trackerKind,
-			endpoint: stringAt(tracker, "endpoint", trackerKind === "jira" ? "" : "https://api.linear.app/graphql"),
+			endpoint: resolveDollar(stringAt(tracker, "endpoint", trackerKind === "jira" ? "" : "https://api.linear.app/graphql"), env),
 			apiKey: apiKey || null,
 			projectSlug,
 			jiraEmail: jiraEmail || null,
@@ -279,13 +281,44 @@ function asInteger(value: unknown, fallback: number): number {
 	return fallback;
 }
 
-function resolveDollar(value: string): string {
-	if (!value.startsWith("$") || !/^\$[A-Za-z_][A-Za-z0-9_]*$/.test(value)) return value;
-	return process.env[value.slice(1)] ?? "";
+async function loadDotEnv(workflowDir: string): Promise<NodeJS.ProcessEnv> {
+	try {
+		const content = await readFile(resolve(workflowDir, ".env"), "utf8");
+		return parseDotEnv(content);
+	} catch {
+		return {};
+	}
 }
 
-function resolvePathValue(value: string, baseDir: string): string {
-	let resolved = resolveDollar(value);
+function parseDotEnv(content: string): NodeJS.ProcessEnv {
+	const env: NodeJS.ProcessEnv = {};
+	for (const line of content.split(/\r?\n/)) {
+		const trimmed = line.trim();
+		if (!trimmed || trimmed.startsWith("#")) continue;
+		const match = /^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(trimmed);
+		if (!match) continue;
+		const [, key, rawValue = ""] = match;
+		env[key] = unquoteDotEnvValue(rawValue);
+	}
+	return env;
+}
+
+function unquoteDotEnvValue(value: string): string {
+	const trimmed = value.trim();
+	if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+		return trimmed.slice(1, -1);
+	}
+	const hash = trimmed.indexOf(" #");
+	return hash >= 0 ? trimmed.slice(0, hash).trimEnd() : trimmed;
+}
+
+function resolveDollar(value: string, env: NodeJS.ProcessEnv): string {
+	if (!value.startsWith("$") || !/^\$[A-Za-z_][A-Za-z0-9_]*$/.test(value)) return value;
+	return env[value.slice(1)] ?? "";
+}
+
+function resolvePathValue(value: string, baseDir: string, env: NodeJS.ProcessEnv): string {
+	let resolved = resolveDollar(value, env);
 	if (resolved.startsWith("~/")) resolved = resolve(homedir(), resolved.slice(2));
 	else if (resolved === "~") resolved = homedir();
 	return isAbsolute(resolved) ? resolve(resolved) : resolve(baseDir, resolved);

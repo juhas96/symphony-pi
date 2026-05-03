@@ -22,10 +22,14 @@ On the developer machine:
 - Codex CLI installed, authenticated, and able to run `codex app-server`.
 - Tracker credentials supplied by environment variables, never committed to git.
 
-For Linear:
+For Linear, either export the variable before starting pi or place it in the target repository's ignored `.env` next to `WORKFLOW.md`:
 
 ```bash
 export LINEAR_API_KEY=...
+```
+
+```dotenv
+LINEAR_API_KEY=...
 ```
 
 For Jira Cloud:
@@ -142,6 +146,8 @@ Inside pi from the target repository:
 /symphony:status
 ```
 
+`/symphony:once` runs one issue and writes local artifacts under `.symphony/runs/`; it does not start the HTTP dashboard. Use `/symphony:status` to see recent artifacts when the daemon is not running.
+
 Start the daemon only after a safe one-issue run succeeds:
 
 ```text
@@ -203,6 +209,6 @@ Requirements:
 
 - `codex app-server` missing: install/authenticate Codex CLI and verify `codex app-server generate-json-schema --out /tmp/codex-schema` works.
 - `/symphony:*` commands missing: restart pi from the target repo and check `pi list` includes the package.
-- Linear validates but finds no work: verify `project_slug`, `active_states`, and token scope.
+- Linear validates but finds no work: verify the issue is assigned to the configured Linear project `project_slug` (not just the team), its state name is included in `active_states`, and the token has access.
 - Jira validates but finds no work: verify `JIRA_ENDPOINT`, `project_key` or `jql`, and status names.
 - Workspaces are empty: fix `hooks.after_create`; pi-symphony only creates the directory unless the hook clones/bootstrap the repo.

@@ -51,6 +51,19 @@ test("dispatch config requires explicit tracker kind and supports explicit Linea
 	assert.equal(config.tracker.projectSlug, "ABC");
 });
 
+test("resolved config loads workflow .env without mutating process env", async () => {
+	const cwd = await mkdtemp(join(tmpdir(), "pi-symphony-"));
+	await writeFile(join(cwd, ".env"), `LINEAR_API_KEY=linear-from-dotenv\nLINEAR_PROJECT_SLUG=PROJECT-FROM-DOTENV\n`);
+	await writeFile(join(cwd, "WORKFLOW.md"), `---\ntracker:\n  kind: linear\n  api_key: $LINEAR_API_KEY\n  project_slug: $LINEAR_PROJECT_SLUG\n---\nTask`);
+
+	const { config } = await loadResolvedConfig(cwd);
+	validateDispatchConfig(config);
+
+	assert.equal(config.tracker.apiKey, "linear-from-dotenv");
+	assert.equal(config.tracker.projectSlug, "PROJECT-FROM-DOTENV");
+	assert.equal(process.env.LINEAR_API_KEY, undefined);
+});
+
 test("resolved config supports Jira Cloud email/api token", async () => {
 	const cwd = await mkdtemp(join(tmpdir(), "pi-symphony-"));
 	process.env.JIRA_EMAIL = "dev@example.com";

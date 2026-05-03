@@ -78,7 +78,7 @@ Shortest path:
 
 1. Install this package with `pi install -l git:git@github.com:juhas96/symphony-pi.git`.
 2. Copy and customize one of `examples/WORKFLOW.*.md` as the target repo's `WORKFLOW.md`.
-3. Set tracker credentials in environment variables, not in git.
+3. Set tracker credentials in exported environment variables or the target repo's ignored `.env`, not in git.
 4. Add `.env`, `.symphony/runs/`, and `.symphony/workspaces/` to the target repo's `.gitignore`.
 5. Run `/symphony:validate`, then `/symphony:once <safe-issue-id>`.
 
@@ -167,6 +167,8 @@ Implement task {{ issue.identifier }}: {{ issue.title }}.
 ```
 
 ## HTTP dashboard/API
+
+`/symphony:once` runs a single issue and writes artifacts under `.symphony/runs/`; it does not start the dashboard. Start `/symphony:daemon --port PORT` for a dashboard and scheduler.
 
 When `server.port` is configured, or `/symphony:daemon --port PORT` / CLI `--port PORT` is used, pi-symphony binds loopback and exposes:
 
