@@ -1,5 +1,5 @@
 {
-  "name": "@jkbjhs/symphony-pi",
+  "name": "symphony-pi",
   "version": "0.4.0",
   "type": "module",
   "description": "Generic Symphony autonomous issue orchestration extension for pi.",
@@ -46,10 +46,10 @@
   },
   "devDependencies": {
     "@mariozechner/pi-coding-agent": "*",
+    "@mariozechner/pi-tui": "*",
     "@types/node": "^24.0.0",
     "fallow": "^2.62.0",
-    "typescript": "^5.9.0",
-    "@mariozechner/pi-tui": "*"
+    "typescript": "^5.9.0"
   },
   "dependencies": {
     "liquidjs": "^10.25.7",
@@ -67,8 +67,5 @@
   "homepage": "https://github.com/juhas96/symphony-pi#readme",
   "engines": {
     "node": ">=22"
-  },
-  "publishConfig": {
-    "access": "public"
   }
 }

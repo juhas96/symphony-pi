@@ -51,7 +51,7 @@ bd init --non-interactive
 From the target repository, install the package into project settings so the team can share the configuration:
 
 ```bash
-pi install -l npm:@jkbjhs/symphony-pi
+pi install -l npm:symphony-pi
 ```
 
 GitHub SSH also works:
@@ -69,7 +69,7 @@ pi install -l /absolute/path/to/pi-symphony
 To try without writing settings:
 
 ```bash
-pi -e npm:@jkbjhs/symphony-pi
+pi -e npm:symphony-pi
 ```
 
 Project installs are written under `.pi/settings.json`; commit that file only after reviewing that it references the intended package source. Pin to a tag or commit when you need reproducible team installs.
@@ -180,7 +180,7 @@ PI_SYMPHONY_LIVE_JIRA=1 JIRA_EMAIL=... JIRA_API_TOKEN=... JIRA_ENDPOINT=https://
 ```text
 Set up pi-symphony in this repository for developer use.
 
-Package source: npm:@jkbjhs/symphony-pi
+Package source: npm:symphony-pi
 
 Requirements:
 1. Review the package docs before installing. Pi packages execute local code.
